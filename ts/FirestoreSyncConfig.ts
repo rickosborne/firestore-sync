@@ -1,3 +1,6 @@
+export const PROFILE_NAME_DEFAULT = 'default';
+export const CONFIG_NAME_DEFAULT = '.firestore-sync.json';
+
 export interface FirestoreSyncConfig {
   readonly profiles?: {
     readonly [name: string]: FirestoreSyncProfile,
@@ -77,8 +80,6 @@ export const DEFAULT_PROFILE_PUSH: FirestoreSyncProfileOperation = {
   updateDocuments: true,
   updateValues: false,  // paranoia!
 };
-
-export const PROFILE_NAME_DEFAULT = 'default';
 
 export const DEFAULT_PROFILE: FirestoreSyncProfile = {
   collectionReferencePrefix: "$firestore:collection$",
