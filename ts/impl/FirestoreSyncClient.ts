@@ -8,14 +8,12 @@ import {
 import {FirestoreSyncConfigAdapter} from "../config/FirestoreSyncConfigAdapter";
 import {FirestoreSyncProfileAdapter} from "../config/FirestoreSyncProfileAdapter";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
-import {FilesystemCollectionVisitor} from "../filesystem/FilesystemCollectionVisitor";
-import {FilesystemDocumentVisitor} from "../filesystem/FilesystemDocumentVisitor";
 import {FilesystemReader} from "../filesystem/FilesystemReader";
 import {FilesystemWriter} from "../filesystem/FilesystemWriter";
-import {FirestoreCollectionVisitor} from "../firestore/FirestoreCollectionVisitor";
-import {FirestoreDocumentVisitor} from "../firestore/FirestoreDocumentVisitor";
 import {FirestoreReader} from "../firestore/FirestoreReader";
 import {FirestoreWriter} from "../firestore/FirestoreWriter";
+import {CollectionVisitor} from "./CollectionVisitor";
+import {DocumentVisitor} from "./DocumentVisitor";
 import {SyncWalker} from "./SyncWalker";
 
 export class FirestoreSyncClient {
@@ -51,8 +49,8 @@ export class FirestoreSyncClient {
     SyncWalker.walk(
       new FirestoreReader(operation),
       new FilesystemWriter(operation),
-      new FirestoreCollectionVisitor(operation),
-      new FirestoreDocumentVisitor(operation),
+      new CollectionVisitor(operation),
+      new DocumentVisitor(operation),
     );
   }
 
@@ -62,8 +60,8 @@ export class FirestoreSyncClient {
     SyncWalker.walk(
       new FilesystemReader(operation),
       new FirestoreWriter(operation),
-      new FilesystemCollectionVisitor(operation),
-      new FilesystemDocumentVisitor(operation),
+      new CollectionVisitor(operation),
+      new DocumentVisitor(operation),
     );
   }
 

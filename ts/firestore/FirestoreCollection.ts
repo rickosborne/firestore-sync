@@ -11,7 +11,7 @@ export class FirestoreCollection implements CollectionLike<FirestoreDocument> {
 
   public withDocument(id: string, block: (document: FirestoreDocument) => void): void {
     this.collectionRef.doc(id).get().then((readDocument) => {
-      block(new FirestoreDocument(readDocument.data()));
+      block(new FirestoreDocument(id, readDocument.data()));
     });
   }
 

@@ -60,6 +60,7 @@ export interface FirestoreSyncProfileOperation {
   readonly deleteValues?: boolean;
   readonly logCreates?: boolean;
   readonly logDeletes?: boolean;
+  readonly logSkips?: boolean;
   readonly logUpdates?: boolean;
   readonly onTypeMismatch?: FirestoreOnTypeMismatch;
   readonly updateCollections?: boolean;

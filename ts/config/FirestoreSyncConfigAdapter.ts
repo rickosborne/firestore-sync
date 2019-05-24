@@ -1,4 +1,4 @@
-import {ProvidedDefaultAdapter} from "../base/ProvidedDefaultAdapter";
+import {ProvidedDefaultAdapter} from "../impl/ProvidedDefaultAdapter";
 import {
   DEFAULT_CONFIG,
   DEFAULT_PROFILE,

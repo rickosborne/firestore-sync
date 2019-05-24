@@ -1,5 +1,5 @@
 import {Logger} from "../base/Logger";
-import {ProvidedDefaultAdapter} from "../base/ProvidedDefaultAdapter";
+import {ProvidedDefaultAdapter} from "../impl/ProvidedDefaultAdapter";
 import {FirestoreOnTypeMismatch, FirestoreSyncProfileOperation} from "./FirestoreSyncConfig";
 import {FirestoreSyncProfileAdapter} from "./FirestoreSyncProfileAdapter";
 
@@ -14,6 +14,7 @@ export class FirestoreSyncProfileOperationAdapter extends ProvidedDefaultAdapter
   public readonly logCreates: boolean;
   public readonly logDeletes: boolean;
   public readonly logger: Logger;
+  public readonly logSkips: boolean;
   public readonly logUpdates: boolean;
   public readonly onTypeMismatch: FirestoreOnTypeMismatch;
   public readonly updateCollections: boolean;
@@ -34,6 +35,7 @@ export class FirestoreSyncProfileOperationAdapter extends ProvidedDefaultAdapter
     this.deleteValues = this.get('deleteValues');
     this.logCreates = this.get('logCreates');
     this.logDeletes = this.get('logDeletes');
+    this.logSkips = this.get('logSkips');
     this.logUpdates = this.get('logUpdates');
     this.onTypeMismatch = this.get('onTypeMismatch');
     this.updateCollections = this.get('updateCollections');

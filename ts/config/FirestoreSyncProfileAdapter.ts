@@ -1,10 +1,10 @@
 import {Logger} from "../base/Logger";
-import {ProvidedDefaultAdapter} from "../base/ProvidedDefaultAdapter";
 import {FilesystemNameCodec} from "../filesystem/FilesystemNameCodec";
 import {PunycodeCodec} from "../filesystem/PunycodeCodec";
 import {SnakeCodec} from "../filesystem/SnakeCodec";
 import {ConsoleLogger} from "../impl/ConsoleLogger";
 import {FileLogger} from "../impl/FileLogger";
+import {ProvidedDefaultAdapter} from "../impl/ProvidedDefaultAdapter";
 import {
   DEFAULT_PROFILE,
   FileNameCodec,
