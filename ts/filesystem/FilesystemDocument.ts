@@ -1,8 +1,10 @@
 import * as fs from "fs";
 import * as path from 'path';
 import {DocumentLike} from "../base/DocumentLike";
+import {Logger, WithLogger} from "../base/Logger";
+import {Fail} from "../impl/Fail";
 
-export class FilesystemDocument implements DocumentLike {
+export class FilesystemDocument implements DocumentLike, WithLogger {
   private content?: string;
   public readonly fullPath: string;
 
@@ -10,6 +12,7 @@ export class FilesystemDocument implements DocumentLike {
     public readonly id: string,
     public readonly directory: string,
     public readonly fileName: string,
+    public readonly logger: Logger,
   ) {
     this.fullPath = path.join(directory, this.fileName);
   }
@@ -19,9 +22,7 @@ export class FilesystemDocument implements DocumentLike {
       block(this);
     } else {
       fs.readFile(this.fullPath, {encoding: 'utf8'}, (err, json) => {
-        if (err) {
-          throw new Error(err.message);
-        }
+        Fail.when(err, 'load', this, () => `Could not readFile "${this.fullPath}"`);
         this.content = json;
         block(this);
       });
