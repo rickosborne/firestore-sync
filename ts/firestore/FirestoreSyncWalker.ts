@@ -10,6 +10,6 @@ export class FirestoreSyncWalker extends SyncWalker {
   }
 
   public eachCollection(block: (collection: CollectionLike) => void): void {
-    return;
+    throw new Error('Not implemented: FirestoreSyncWalker#eachCollection');
   }
 }

@@ -10,10 +10,10 @@ export class FilesystemDocumentVisitor extends DocumentVisitor {
   }
 
   public startDocument(documentId: string): void {
-    return;
+    throw new Error('Not implemented: FilesystemDocumentVisitor#startDocument');
   }
 
   public visit(read: DocumentLike | undefined, write: DocumentLike | undefined): void {
-    return;
+    throw new Error('Not implemented: FilesystemDocumentVisitor#visit');
   }
 }

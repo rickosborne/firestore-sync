@@ -4,10 +4,10 @@ import {StoreLike} from "../base/StoreLike";
 
 export class FilesystemClient implements StoreLike {
   public withCollection(ourCollection: CollectionLike, block: (theirCollection: CollectionLike) => void): void {
-    return;
+    throw new Error('Not implemented: FilesystemClient#withCollection');
   }
 
   public withDocument(collection: CollectionLike, documentId: string, block: (document: DocumentLike) => void): void {
-    return;
+    throw new Error('Not implemented: FilesystemClient#withDocument');
   }
 }

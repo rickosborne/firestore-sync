@@ -10,11 +10,11 @@ export class FirestoreDocumentVisitor extends DocumentVisitor {
   }
 
   public startDocument(documentId: string): void {
-    return;
+    throw new Error('Not implemented: FirestoreDocumentVisitor#startDocument');
   }
 
   public visit(read: DocumentLike | undefined, write: DocumentLike | undefined): void {
-    return;
+    throw new Error('Not implemented: FirestoreDocumentVisitor#visit');
   }
 
 }

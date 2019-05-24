@@ -10,7 +10,7 @@ export class FilesystemSyncWalker extends SyncWalker {
   }
 
   public eachCollection(block: (collection: CollectionLike) => void): void {
-    return;
+    throw new Error('Not implemented: FilesystemSyncWalker#eachCollection');
   }
 
 }

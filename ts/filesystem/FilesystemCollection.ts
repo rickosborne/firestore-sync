@@ -7,6 +7,7 @@ import {FilesystemDocument} from "./FilesystemDocument";
 
 export class FilesystemCollection implements CollectionLike {
   constructor(
+    public readonly id: string,
     private readonly directory: string,
   ) {
   }
