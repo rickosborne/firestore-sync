@@ -7,6 +7,18 @@ export interface FirestoreSyncConfig {
   };
 }
 
+export enum FirestoreSyncOperation {
+  PULL = 'pull',
+  PUSH = 'push',
+  SYNC = 'sync',
+}
+
+export const SYNC_OPERATIONS: string[] = [
+  FirestoreSyncOperation.PULL,
+  FirestoreSyncOperation.PUSH,
+  FirestoreSyncOperation.SYNC,
+];
+
 export enum FirestoreSyncOrder {
   /* useful for backups */
   PULL_THEN_PUSH = 'pull-then-push',
