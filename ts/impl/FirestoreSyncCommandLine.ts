@@ -8,7 +8,7 @@ import {
   FirestoreSyncOperation,
   PROFILE_NAME_DEFAULT,
   SYNC_OPERATIONS,
-} from "./config/FirestoreSyncConfig";
+} from "../config/FirestoreSyncConfig";
 import {FirestoreSyncClient} from "./FirestoreSyncClient";
 
 const HELP_TEXT = `

@@ -26,10 +26,16 @@ export enum FirestoreSyncOrder {
   PUSH_THEN_PULL = 'push-then-pull',
 }
 
+export enum FileNameCodec {
+  PUNYCODE = 'punycode',
+  SNAKE = 'snake',
+}
+
 export interface FirestoreSyncProfile {
   readonly collectionReferencePrefix?: string;
   readonly directory?: string;
   readonly documentReferencePrefix?: string;
+  readonly fileNameCodec?: FileNameCodec;
   readonly geopointPrefix?: string;
   readonly log?: string;
   readonly pull?: FirestoreSyncProfileOperation;
@@ -97,6 +103,7 @@ export const DEFAULT_PROFILE: FirestoreSyncProfile = {
   collectionReferencePrefix: "$firestore:collection$",
   directory: './data',
   documentReferencePrefix: "$firestore:document$",
+  fileNameCodec: FileNameCodec.SNAKE,
   geopointPrefix: "$firestore:geopoint$",
   log: '',
   pull: DEFAULT_PROFILE_PULL,

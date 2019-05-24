@@ -7,7 +7,5 @@ export abstract class DocumentVisitor {
   ) {
   }
 
-  public abstract startDocument(documentId: string): void;
-
   public abstract visit(read: DocumentLike | undefined, write: DocumentLike | undefined): void;
 }

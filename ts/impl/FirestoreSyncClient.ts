@@ -4,18 +4,19 @@ import {
   FirestoreSyncConfig,
   FirestoreSyncOperation,
   FirestoreSyncOrder,
-} from "./config/FirestoreSyncConfig";
-import {FirestoreSyncConfigAdapter} from "./config/FirestoreSyncConfigAdapter";
-import {FirestoreSyncProfileAdapter} from "./config/FirestoreSyncProfileAdapter";
-import {FirestoreSyncProfileOperationAdapter} from "./config/FirestoreSyncProfileOperationAdapter";
-import {FilesystemClient} from "./filesystem/FilesystemClient";
-import {FilesystemCollectionVisitor} from "./filesystem/FilesystemCollectionVisitor";
-import {FilesystemDocumentVisitor} from "./filesystem/FilesystemDocumentVisitor";
-import {FilesystemSyncWalker} from "./filesystem/FilesystemSyncWalker";
-import {FirestoreClient} from "./firestore/FirestoreClient";
-import {FirestoreCollectionVisitor} from "./firestore/FirestoreCollectionVisitor";
-import {FirestoreDocumentVisitor} from "./firestore/FirestoreDocumentVisitor";
-import {FirestoreSyncWalker} from "./firestore/FirestoreSyncWalker";
+} from "../config/FirestoreSyncConfig";
+import {FirestoreSyncConfigAdapter} from "../config/FirestoreSyncConfigAdapter";
+import {FirestoreSyncProfileAdapter} from "../config/FirestoreSyncProfileAdapter";
+import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
+import {FilesystemCollectionVisitor} from "../filesystem/FilesystemCollectionVisitor";
+import {FilesystemDocumentVisitor} from "../filesystem/FilesystemDocumentVisitor";
+import {FilesystemReader} from "../filesystem/FilesystemReader";
+import {FilesystemWriter} from "../filesystem/FilesystemWriter";
+import {FirestoreCollectionVisitor} from "../firestore/FirestoreCollectionVisitor";
+import {FirestoreDocumentVisitor} from "../firestore/FirestoreDocumentVisitor";
+import {FirestoreReader} from "../firestore/FirestoreReader";
+import {FirestoreWriter} from "../firestore/FirestoreWriter";
+import {SyncWalker} from "./SyncWalker";
 
 export class FirestoreSyncClient {
   private readonly config: FirestoreSyncConfigAdapter;
@@ -46,10 +47,10 @@ export class FirestoreSyncClient {
 
   // noinspection JSMethodCanBeStatic
   public pull(profile: FirestoreSyncProfileAdapter): void {
-    const operation = new FirestoreSyncProfileOperationAdapter(DEFAULT_PROFILE_PULL, profile.pull);
-    const walker = new FirestoreSyncWalker(operation);
-    walker.walk(
-      new FirestoreClient(),
+    const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.pull);
+    SyncWalker.walk(
+      new FirestoreReader(operation),
+      new FilesystemWriter(operation),
       new FirestoreCollectionVisitor(operation),
       new FirestoreDocumentVisitor(operation),
     );
@@ -57,10 +58,10 @@ export class FirestoreSyncClient {
 
   // noinspection JSMethodCanBeStatic
   private push(profile: FirestoreSyncProfileAdapter): void {
-    const operation = new FirestoreSyncProfileOperationAdapter(DEFAULT_PROFILE_PULL, profile.push);
-    const walker = new FilesystemSyncWalker(operation);
-    walker.walk(
-      new FilesystemClient(),
+    const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.push);
+    SyncWalker.walk(
+      new FilesystemReader(operation),
+      new FirestoreWriter(operation),
       new FilesystemCollectionVisitor(operation),
       new FilesystemDocumentVisitor(operation),
     );

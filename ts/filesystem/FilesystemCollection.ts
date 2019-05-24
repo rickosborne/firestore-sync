@@ -1,19 +1,19 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import * as punycode from 'punycode';
 import {CollectionLike} from "../base/CollectionLike";
-import {DocumentLike} from "../base/DocumentLike";
 import {FilesystemDocument} from "./FilesystemDocument";
+import {FilesystemNameCodec} from "./FilesystemNameCodec";
 
-export class FilesystemCollection implements CollectionLike {
+export class FilesystemCollection implements CollectionLike<FilesystemDocument> {
   constructor(
     public readonly id: string,
     private readonly directory: string,
+    private readonly nameCodec: FilesystemNameCodec,
   ) {
   }
 
-  public withDocument(id: string, block: (document: DocumentLike) => void): void {
-    const document = new FilesystemDocument(this.directory, id);
+  public withDocument(id: string, block: (document: FilesystemDocument) => void): void {
+    const fileName = this.nameCodec.encode(id) + '.json';
+    const document = new FilesystemDocument(id, this.directory, fileName);
     document.load(block);
   }
 
@@ -24,7 +24,7 @@ export class FilesystemCollection implements CollectionLike {
       } else {
         block(fileNames
           .map((name) => name.replace(/\.json$/, ''))
-          .map((punycodeId) => punycode.decode(punycodeId)),
+          .map((encoded) => this.nameCodec.decode(encoded)),
         );
       }
     });

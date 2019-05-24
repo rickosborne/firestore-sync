@@ -9,12 +9,10 @@ import {
 import {FirestoreSyncProfileAdapter} from "./FirestoreSyncProfileAdapter";
 
 export class FirestoreSyncConfigAdapter extends ProvidedDefaultAdapter<FirestoreSyncConfig> implements FirestoreSyncConfig {
+  public readonly profiles: { [profileName: string]: FirestoreSyncProfile };
+
   public get defaultProfile(): FirestoreSyncProfileAdapter {
     return this.getProfile(PROFILE_NAME_DEFAULT);
-  }
-
-  public get profiles(): { [profileName: string]: FirestoreSyncProfile } {
-    return this.get('profiles');
   }
 
   constructor(
@@ -22,6 +20,7 @@ export class FirestoreSyncConfigAdapter extends ProvidedDefaultAdapter<Firestore
     public readonly defaultConfig: FirestoreSyncConfig = DEFAULT_CONFIG,
   ) {
     super(providedConfig, defaultConfig);
+    this.profiles = this.get('profiles');
   }
 
   public getProfile(profileName: string): FirestoreSyncProfileAdapter {

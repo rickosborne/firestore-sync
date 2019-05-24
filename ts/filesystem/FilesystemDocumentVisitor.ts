@@ -9,10 +9,6 @@ export class FilesystemDocumentVisitor extends DocumentVisitor {
     super(config);
   }
 
-  public startDocument(documentId: string): void {
-    throw new Error('Not implemented: FilesystemDocumentVisitor#startDocument');
-  }
-
   public visit(read: DocumentLike | undefined, write: DocumentLike | undefined): void {
     throw new Error('Not implemented: FilesystemDocumentVisitor#visit');
   }
