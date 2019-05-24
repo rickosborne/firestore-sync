@@ -3,4 +3,5 @@
 .idea/
 .nyc_output/
 node_modules/
+.firestore-sync.json
 

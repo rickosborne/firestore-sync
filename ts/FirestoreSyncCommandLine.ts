@@ -1,5 +1,15 @@
 import arg = require('arg');
-import {CONFIG_NAME_DEFAULT, DEFAULT_CONFIG, PROFILE_NAME_DEFAULT, SYNC_OPERATIONS} from "./FirestoreSyncConfig";
+import * as fs from 'fs';
+import {
+  CONFIG_NAME_DEFAULT,
+  DEFAULT_CONFIG,
+  DEFAULT_PROFILE,
+  FirestoreSyncConfig,
+  FirestoreSyncOperation,
+  PROFILE_NAME_DEFAULT,
+  SYNC_OPERATIONS,
+} from "./config/FirestoreSyncConfig";
+import {FirestoreSyncClient} from "./FirestoreSyncClient";
 
 const HELP_TEXT = `
 Usage: firebase-sync [operation] [options]
@@ -9,7 +19,7 @@ Operations:
   pull    Copy Firestore ==> local filesystem
   push    Copy local filesystem ==> Firestore
   sync    Copy in each direction
-            Default: ${DEFAULT_CONFIG.profiles![PROFILE_NAME_DEFAULT].sync}
+            Default: ${DEFAULT_PROFILE.sync}
 
   In each direction, config flags control the copy/merge/delete strategy.
   You can define profiles with flags commensurate to the level of
@@ -28,7 +38,7 @@ Options:
 
 export class FirestoreSyncCommandLine {
   public readonly configFileName: string;
-  public readonly operation?: string;
+  public readonly operation: FirestoreSyncOperation;
   public readonly profileName: string;
   public readonly showDefaults: boolean;
   public readonly showHelp: boolean;
@@ -59,9 +69,11 @@ export class FirestoreSyncCommandLine {
       '--profile': profileName = PROFILE_NAME_DEFAULT,
     } = args;
 
-    this.operation = standalone.pop();
+    const maybeOperationName: string | undefined = standalone.pop();
+    const validOperation = SYNC_OPERATIONS.includes(maybeOperationName || '');
+    this.operation = validOperation ? maybeOperationName as FirestoreSyncOperation : FirestoreSyncOperation.SYNC;
     this.configFileName = configFileName;
-    this.showHelp = showHelp || this.operation == null || !SYNC_OPERATIONS.includes(this.operation);
+    this.showHelp = showHelp || !validOperation;
     this.showDefaults = showDefaults;
     this.profileName = profileName;
   }
@@ -75,6 +87,14 @@ export class FirestoreSyncCommandLine {
       this.logger(HELP_TEXT);
       return;
     }
-    this.logger(`TODO operation: ${this.operation}`);
+    fs.readFile(this.configFileName, {encoding: 'utf8'}, (err, configJSON) => {
+      if (err) {
+        this.logger(`Error trying to read ${this.configFileName}:\n${err.message}`);
+        throw new Error(err.message);
+      }
+      const config: FirestoreSyncConfig = JSON.parse(configJSON);
+      const client = new FirestoreSyncClient(config);
+      client.perform(this.operation, this.profileName);
+    });
   }
 }
