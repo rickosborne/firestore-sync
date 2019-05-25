@@ -5,3 +5,4 @@ node_modules/
 dist/
 .firestore-sync.json
 .firebaserc
+data/
