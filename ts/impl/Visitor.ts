@@ -1,7 +1,15 @@
+import {Identified, sortById} from "../base/Identified";
 import {Logger, WithLogger} from "../base/Logger";
+import {CollectionVisitor} from "./CollectionVisitor";
+import {DocumentVisitor} from "./DocumentVisitor";
 import {Fail} from "./Fail";
+import {PropertyVisitor} from "./PropertyVisitor";
 
-export abstract class Visitor<T extends {id: string}> implements WithLogger {
+interface ArrayIndex {
+  [id: string]: number;
+}
+
+export abstract class Visitor<T extends Identified> implements WithLogger, Identified {
   protected constructor(
     public readonly noun: string,
     public readonly doCreate: boolean,
@@ -9,7 +17,43 @@ export abstract class Visitor<T extends {id: string}> implements WithLogger {
     public readonly doDelete: boolean,
     public readonly logSkips: boolean,
     public readonly logger: Logger,
+    public readonly id: string,
   ) {
+  }
+
+  public getCollectionVisitors(): Promise<CollectionVisitor[]> {
+    return Promise.resolve([]);
+  }
+
+  public getDocumentVisitors(): Promise<DocumentVisitor[]> {
+    return Promise.resolve([]);
+  }
+
+  public getPropertyVisitors(): Promise<PropertyVisitor[]> {
+    return Promise.resolve([]);
+  }
+
+  // noinspection JSMethodCanBeStatic
+  protected makeIndex<M extends Identified>(items: M[]): ArrayIndex {
+    return items.reduce((prev, cur, idx) => {
+      prev[cur.id] = idx;
+      return prev;
+    }, {} as { [id: string]: number });
+  }
+
+  protected merge<M extends Identified, V extends Visitor<M>>(
+    readItems: M[],
+    writeItems: M[],
+    assembler: (read: M | undefined, write: M | undefined) => V,
+  ): V[] {
+    const readIndex = this.makeIndex(readItems);
+    const writeIndex = this.makeIndex(writeItems);
+    return readItems
+      .map((readItem) => assembler(readItem, readItem.id in writeIndex ? writeItems[writeIndex[readItem.id]] : undefined))
+      .concat(writeItems
+        .filter((writeItem) => !(writeItem.id in readIndex))
+        .map((writeItem) => assembler(undefined, writeItem)))
+      .sort(sortById);
   }
 
   public visit(

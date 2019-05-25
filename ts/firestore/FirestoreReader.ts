@@ -1,4 +1,3 @@
-import {CollectionLike} from "../base/CollectionLike";
 import {ReadableStore} from "../base/ReadableStore";
 
 import * as admin from 'firebase-admin';
@@ -10,22 +9,12 @@ export class FirestoreReader implements ReadableStore<FirestoreCollection, Fires
   protected readonly firestore: FirebaseFirestore.Firestore;
 
   constructor(
-    config: FirestoreSyncProfileOperationAdapter,
+    private readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
     this.firestore = admin.initializeApp().firestore();
   }
 
-  public withCollection(collection: CollectionLike<any>, block: (collection?: FirestoreCollection) => void): void {
-    const collectionId = collection.id;
-    const collectionRef: admin.firestore.CollectionReference = this.firestore.collection(collectionId);
-    block(new FirestoreCollection(collectionId, collectionRef));
-  }
-
-  public withCollections(block: (readCollections: FirestoreCollection[]) => void): void {
-    throw new Error('Not implemented: FirestoreClient#withCollections');
-  }
-
-  public withDocument(collection: CollectionLike<any>, documentId: string, block: (document?: FirestoreDocument) => void): void {
-    throw new Error('Not implemented: FirestoreClient#withDocument');
+  public getCollections(): Promise<FirestoreCollection[]> {
+    throw new Error('Not implemented: FirestoreReader#getCollections');
   }
 }

@@ -9,17 +9,7 @@ export class FirestoreCollection implements CollectionLike<FirestoreDocument> {
   ) {
   }
 
-  public withDocument(id: string, block: (document: FirestoreDocument) => void): void {
-    this.collectionRef.doc(id).get().then((readDocument) => {
-      block(new FirestoreDocument(id, readDocument.data()));
-    });
+  public async getDocuments(): Promise<FirestoreDocument[]> {
+    throw new Error('Not implemented: FirestoreCollection#getDocuments');
   }
-
-  public withDocumentIds(block: (documentIds: string[]) => void): void {
-    this.collectionRef.listDocuments().then((documentRefs) => {
-      const ids = documentRefs.map((documentRef) => documentRef.id);
-      block(ids);
-    });
-  }
-
 }

@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import {CollectionLike} from "../base/CollectionLike";
 import {Logger, WithLogger} from "../base/Logger";
 import {ReadableStore} from "../base/ReadableStore";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
@@ -22,30 +21,24 @@ export class FilesystemReader implements ReadableStore<FilesystemCollection, Fil
     this.nameCodec = config.profile.nameCodec;
   }
 
-  public withCollection(readCollection: CollectionLike<any>, block: (writeCollection: FilesystemCollection) => void): void {
-    throw new Error('Not implemented: FilesystemClient#withCollection');
-  }
-
-  public withCollections(block: (readCollections: FilesystemCollection[]) => void): void {
-    fs.stat(this.directory, (statErr, stats) => {
-      Fail.when(statErr, 'eachCollection', this, () => `Could not stat "${this.directory}"`);
-      Fail.unless(stats.isDirectory(), 'eachCollection', this, () => `Not a directory: "${this.directory}"`);
-      fs.readdir(this.directory, {withFileTypes: true}, (readErr, files) => {
-        Fail.when(readErr, 'eachCollection', this, () => `Could not readdir "${this.directory}"`);
-        const collections = files
-          .filter((file) => file.isDirectory())
-          .map((dir) => new FilesystemCollection(
-            this.nameCodec.decode(dir.name),
-            path.join(this.directory, dir.name),
-            this.nameCodec,
-            this.logger,
-          ));
-        block(collections);
+  public async getCollections(): Promise<FilesystemCollection[]> {
+    return new Promise((resolve) => {
+      fs.stat(this.directory, (statErr, stats) => {
+        Fail.when(statErr, 'eachCollection', this, () => `Could not stat "${this.directory}"`);
+        Fail.unless(stats.isDirectory(), 'eachCollection', this, () => `Not a directory: "${this.directory}"`);
+        fs.readdir(this.directory, {withFileTypes: true}, (readErr, files) => {
+          Fail.when(readErr, 'eachCollection', this, () => `Could not readdir "${this.directory}"`);
+          const collections = files
+            .filter((file) => file.isDirectory())
+            .map((dir) => new FilesystemCollection(
+              this.nameCodec.decode(dir.name),
+              path.join(this.directory, dir.name),
+              this.nameCodec,
+              this.logger,
+            ));
+          resolve(collections);
+        });
       });
     });
-  }
-
-  public withDocument(collection: CollectionLike<any>, documentId: string, block: (document: FilesystemDocument) => void): void {
-    throw new Error('Not implemented: FilesystemClient#withDocument');
   }
 }

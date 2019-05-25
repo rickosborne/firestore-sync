@@ -1,35 +1,26 @@
-import {CollectionLike} from "../base/CollectionLike";
-import {DocumentLike} from "../base/DocumentLike";
-import {ReadableStore} from "../base/ReadableStore";
-import {WritableStore} from "../base/WritableStore";
-import {CollectionVisitor} from "./CollectionVisitor";
-import {DocumentVisitor} from "./DocumentVisitor";
+import {Visitor} from "./Visitor";
 
 export class SyncWalker {
-  public static walk<RC extends CollectionLike<RD>, WC extends CollectionLike<WD>, RD extends DocumentLike, WD extends DocumentLike>(
-    readStore: ReadableStore<RC, RD>,
-    writeStore: WritableStore<WC, WD>,
-    collectionVisitor: CollectionVisitor,
-    docVisitor: DocumentVisitor,
-  ): void {
-    readStore.withCollections((collections) => {
-      for (const readCollection of collections) {
-        readStore.withCollection(readCollection, (writeCollection) => {
-          collectionVisitor.visit(readCollection, writeCollection, () => {
-            readCollection.withDocumentIds((documentIds: string[]) => {
-              for (const documentId of documentIds) {
-                readCollection.withDocument(documentId, (readDocument) => {
-                  readStore.withDocument(readCollection, documentId, (writeDocument) => {
-                    docVisitor.visit(readDocument, writeDocument, () => {
-                      return;
-                    });
-                  });
-                });
-              }
-            });
-          });
-        });
-      }
-    });
+
+  public async walkCollections(visitor: Visitor<any>): Promise<void> {
+    const collectionVisitors = await visitor.getCollectionVisitors();
+    for (const collectionVisitor of collectionVisitors) {
+      await this.walkDocuments(collectionVisitor);
+    }
+  }
+
+  public async walkDocuments(visitor: Visitor<any>): Promise<void> {
+    const documentVisitors = await visitor.getDocumentVisitors();
+    for (const documentVisitor of documentVisitors) {
+      await this.walkCollections(documentVisitor);
+      await this.walkProperties(documentVisitor);
+    }
+  }
+
+  public async walkProperties(visitor: Visitor<any>): Promise<void> {
+    const propertyVisitors = await visitor.getPropertyVisitors();
+    for (const propertyVisitor of propertyVisitors) {
+      await this.walkProperties(propertyVisitor);
+    }
   }
 }

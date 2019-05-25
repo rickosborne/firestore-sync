@@ -14,6 +14,20 @@ export class FilesystemCollection implements CollectionLike<FilesystemDocument>,
   ) {
   }
 
+  public async getDocuments(): Promise<FilesystemDocument[]> {
+    return new Promise((resolve) => {
+      fs.readdir(this.directory, {encoding: 'utf8'}, (err, fileNames) => {
+        Fail.when(err, 'withDocumentIds', this, () => `Could not readdir "${this.directory}"`);
+        const documents = fileNames.map((name) => {
+          const encodedId = name.replace(/\.json$/, '');
+          const id = this.nameCodec.decode(encodedId);
+          return new FilesystemDocument(id, this.directory, name, this.logger);
+        });
+        resolve(documents);
+      });
+    });
+  }
+
   public withDocument(id: string, block: (document: FilesystemDocument) => void): void {
     const fileName = this.nameCodec.encode(id) + '.json';
     const document = new FilesystemDocument(id, this.directory, fileName, this.logger);

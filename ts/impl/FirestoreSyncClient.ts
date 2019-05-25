@@ -12,8 +12,7 @@ import {FilesystemReader} from "../filesystem/FilesystemReader";
 import {FilesystemWriter} from "../filesystem/FilesystemWriter";
 import {FirestoreReader} from "../firestore/FirestoreReader";
 import {FirestoreWriter} from "../firestore/FirestoreWriter";
-import {CollectionVisitor} from "./CollectionVisitor";
-import {DocumentVisitor} from "./DocumentVisitor";
+import {StoreVisitor} from "./StoreVisitor";
 import {SyncWalker} from "./SyncWalker";
 
 export class FirestoreSyncClient {
@@ -26,53 +25,45 @@ export class FirestoreSyncClient {
     this.config = new FirestoreSyncConfigAdapter(providedConfig, defaultConfig);
   }
 
-  public perform(operation: FirestoreSyncOperation, profileName: string): void {
+  public async perform(operation: FirestoreSyncOperation, profileName: string): Promise<void> {
     if (!this.config.hasProfile(profileName)) {
       throw new Error(`Profile not found: ${profileName}`);
     }
     console.error(`TODO: operation=${operation} profile=${profileName} config=${JSON.stringify(this.config, null, 2)}`);
     const profile = this.config.getProfile(profileName);
     if (operation === FirestoreSyncOperation.PULL) {
-      this.pull(profile);
+      await this.pull(profile);
     } else if (operation === FirestoreSyncOperation.PUSH) {
-      this.push(profile);
+      await this.push(profile);
     } else if (operation === FirestoreSyncOperation.SYNC) {
-      this.sync(profile);
+      await this.sync(profile);
     } else {
       throw new Error(`Unknown operation: ${operation}`);
     }
   }
 
   // noinspection JSMethodCanBeStatic
-  public pull(profile: FirestoreSyncProfileAdapter): void {
+  public async pull(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.pull);
-    SyncWalker.walk(
-      new FirestoreReader(operation),
-      new FilesystemWriter(operation),
-      new CollectionVisitor(operation),
-      new DocumentVisitor(operation),
-    );
+    const storeVisitor = new StoreVisitor(new FirestoreReader(operation), new FilesystemWriter(operation), operation);
+    await new SyncWalker().walkCollections(storeVisitor);
   }
 
   // noinspection JSMethodCanBeStatic
-  private push(profile: FirestoreSyncProfileAdapter): void {
+  private async push(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.push);
-    SyncWalker.walk(
-      new FilesystemReader(operation),
-      new FirestoreWriter(operation),
-      new CollectionVisitor(operation),
-      new DocumentVisitor(operation),
-    );
+    const storeVisitor = new StoreVisitor(new FilesystemReader(operation), new FirestoreWriter(operation), operation);
+    await new SyncWalker().walkCollections(storeVisitor);
   }
 
-  private sync(profile: FirestoreSyncProfileAdapter): void {
+  private async sync(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const order = profile.sync;
     if (order === FirestoreSyncOrder.PULL_THEN_PUSH) {
-      this.pull(profile);
-      this.push(profile);
+      await this.pull(profile);
+      await this.push(profile);
     } else if (order === FirestoreSyncOrder.PUSH_THEN_PULL) {
-      this.push(profile);
-      this.pull(profile);
+      await this.push(profile);
+      await this.pull(profile);
     } else {
       throw new Error(`Unknown sync order: ${order}`);
     }

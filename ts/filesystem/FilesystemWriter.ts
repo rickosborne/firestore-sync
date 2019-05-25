@@ -15,4 +15,12 @@ export class FilesystemWriter extends FilesystemReader implements WritableStore<
   public createCollection(collection: CollectionLike<any>): void {
     throw new Error('Not implemented: FilesystemWriter#createCollection');
   }
+
+  public withCollectionForWrite(collection: CollectionLike<any>, block: (collection?: FilesystemCollection) => void): void {
+    throw new Error('Not implemented: FilesystemWriter#withCollectionForWrite');
+  }
+
+  public withDocumentForWrite(collection: CollectionLike<any>, documentId: string, block?: (document?: FilesystemDocument) => void): void {
+    throw new Error('Not implemented: FilesystemWriter#withDocumentForWrite');
+  }
 }
