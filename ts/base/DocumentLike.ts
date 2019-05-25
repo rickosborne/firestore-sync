@@ -1,9 +1,9 @@
-import {PropertyLike} from "../impl/PropertyLike";
-
-export type MaybeDocumentConsumer<D extends DocumentLike> = (document?: D) => void;
+import {PropertyLike} from "./PropertyLike";
 
 export interface DocumentLike {
   id: string;
 
-  getProperties(): Promise<PropertyLike[]>;
+  buildEmptyReadableProperty(property: PropertyLike): PropertyLike;
+
+  getReadableProperties(): Promise<PropertyLike[]>;
 }

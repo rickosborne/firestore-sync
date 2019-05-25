@@ -19,6 +19,9 @@ export class ConsoleLogger {
 
   public static toOutputStream(name: string | null): StandardOutputStream | null {
     const normalized = (name || '').toUpperCase();
+    if (normalized === '') {
+      return StandardOutputStream.STDOUT;
+    }
     switch (normalized) {
       case StandardOutputStream.STDOUT:
         return StandardOutputStream.STDOUT;

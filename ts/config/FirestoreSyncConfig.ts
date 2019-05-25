@@ -33,6 +33,7 @@ export enum FileNameCodec {
 
 export interface FirestoreSyncProfile {
   readonly collectionReferencePrefix?: string;
+  readonly databaseURL?: string;
   readonly directory?: string;
   readonly documentReferencePrefix?: string;
   readonly fileNameCodec?: FileNameCodec;
@@ -40,6 +41,7 @@ export interface FirestoreSyncProfile {
   readonly log?: string;
   readonly pull?: FirestoreSyncProfileOperation;
   readonly push?: FirestoreSyncProfileOperation;
+  readonly serviceAccountKeyPath?: string;
   readonly sync?: FirestoreSyncOrder;
   readonly timestampPrefix?: string;
 }
@@ -77,6 +79,7 @@ export const DEFAULT_PROFILE_PULL: FirestoreSyncProfileOperation = {
   deleteValues: false,
   logCreates: false,
   logDeletes: false,
+  logSkips: true,
   logUpdates: false,
   onTypeMismatch: FirestoreOnTypeMismatch.LOG,
   updateCollections: true,
@@ -93,6 +96,7 @@ export const DEFAULT_PROFILE_PUSH: FirestoreSyncProfileOperation = {
   deleteValues: false,
   logCreates: true,
   logDeletes: true,
+  logSkips: true,
   logUpdates: true,
   onTypeMismatch: FirestoreOnTypeMismatch.FAIL,  // paranoia!
   updateCollections: true,

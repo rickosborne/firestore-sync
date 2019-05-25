@@ -14,7 +14,7 @@ export abstract class ProvidedDefaultAdapter<T> {
     }
     const defaultValue = this.defaultValues[key];
     if (defaultValue == null) {
-      throw new Error('Expected a default');
+      throw new Error(`Expected a default for ${key}`);
     }
     return defaultValue as NonNullable<T[K]>;
   }

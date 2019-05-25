@@ -16,8 +16,11 @@ Create a config file named `.firestore-sync.json`:
 ```json5
 {
   "profiles": {
-    // default profile -- all you really need to set is the `directory`
+    // default profile -- all you really need to set is:
+    // directory, databaseURL, serviceAccountKeyPath
     "default": {
+      "databaseURL": "https://example.firebaseio.com",
+      "serviceAccountKeyPath": "../path/to/serviceAccountKey.json",
       "directory": "../path/to/seed/directory/",  // relative to the config file
       "log": "",  // empty or missing means STDOUT
       "pull": {  // strategy options for pull operations

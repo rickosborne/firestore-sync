@@ -1,46 +1,74 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {CollectionLike} from "../base/CollectionLike";
+import {DocumentLike} from "../base/DocumentLike";
 import {Logger, WithLogger} from "../base/Logger";
+import {WritableCollectionLike} from "../base/WritableCollectionLike";
 import {Fail} from "../impl/Fail";
-import {FilesystemDocument} from "./FilesystemDocument";
+import {FilesystemDocument, WritableFilesystemDocument} from "./FilesystemDocument";
 import {FilesystemNameCodec} from "./FilesystemNameCodec";
 
 export class FilesystemCollection implements CollectionLike<FilesystemDocument>, WithLogger {
   constructor(
     public readonly id: string,
-    private readonly directory: string,
-    private readonly nameCodec: FilesystemNameCodec,
+    protected readonly directory: string,
+    protected readonly nameCodec: FilesystemNameCodec,
     public readonly logger: Logger,
   ) {
   }
 
+  public buildEmptyReadableDocument(document: DocumentLike): FilesystemDocument {
+    return new FilesystemDocument(document.id, this.directory, this.nameFromId(document.id), this.logger);
+  }
+
   public async getDocuments(): Promise<FilesystemDocument[]> {
+    return this.getDocumentsWithBuilder(false, (id, name, fullPath) => new FilesystemDocument(id, fullPath, name, this.logger));
+  }
+
+  protected async getDocumentsWithBuilder<D>(
+    createDirectory: boolean,
+    builder: (id: string, name: string, path: string) => D,
+  ): Promise<D[]> {
     return new Promise((resolve) => {
       fs.readdir(this.directory, {encoding: 'utf8'}, (err, fileNames) => {
-        Fail.when(err, 'withDocumentIds', this, () => `Could not readdir "${this.directory}"`);
-        const documents = fileNames.map((name) => {
-          const encodedId = name.replace(/\.json$/, '');
-          const id = this.nameCodec.decode(encodedId);
-          return new FilesystemDocument(id, this.directory, name, this.logger);
-        });
-        resolve(documents);
+        if (err != null && err.code === 'ENOENT' && createDirectory) {
+          fs.mkdirSync(this.directory);
+          resolve([]);
+        } else {
+          Fail.when(err, 'getDocuments', this, () => `Could not readdir "${this.directory}"`);
+          const documents = fileNames.map((name) => builder(this.idFromName(name), name, path.join(this.directory, name)));
+          resolve(documents);
+        }
       });
     });
   }
 
-  public withDocument(id: string, block: (document: FilesystemDocument) => void): void {
-    const fileName = this.nameCodec.encode(id) + '.json';
-    const document = new FilesystemDocument(id, this.directory, fileName, this.logger);
-    document.load(block);
+  protected idFromName(name: string): string {
+    const encodedId = name.replace(/\.json$/, '');
+    return this.nameCodec.decode(encodedId);
   }
 
-  public withDocumentIds(block: (documentIds: string[]) => void): void {
-    fs.readdir(this.directory, {encoding: 'utf8'}, (err, fileNames) => {
-      Fail.when(err, 'withDocumentIds', this, () => `Could not readdir "${this.directory}"`);
-      block(fileNames
-        .map((name) => name.replace(/\.json$/, ''))
-        .map((encoded) => this.nameCodec.decode(encoded)),
-      );
-    });
+  protected nameFromId(id: string): string {
+    return this.nameCodec.encode(id) + '.json';
+  }
+}
+
+// tslint:disable-next-line
+export class WritableFilesystemCollection extends FilesystemCollection implements WritableCollectionLike<FilesystemDocument, WritableFilesystemDocument> {
+  constructor(
+    id: string,
+    directory: string,
+    nameCodec: FilesystemNameCodec,
+    logger: Logger,
+  ) {
+    super(id, directory, nameCodec, logger);
+  }
+
+  public buildEmptyWritableDocument(document: DocumentLike): WritableFilesystemDocument {
+    return new WritableFilesystemDocument(document.id, this.directory, this.nameFromId(document.id), this.logger);
+  }
+
+  public async getDocuments(): Promise<WritableFilesystemDocument[]> {
+    return this.getDocumentsWithBuilder(true, (id, name, fullPath) => new WritableFilesystemDocument(id, fullPath, name, this.logger));
   }
 }

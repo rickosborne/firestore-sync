@@ -2,34 +2,32 @@ import {Identified, sortById} from "../base/Identified";
 import {Logger, WithLogger} from "../base/Logger";
 import {CollectionVisitor} from "./CollectionVisitor";
 import {DocumentVisitor} from "./DocumentVisitor";
-import {Fail} from "./Fail";
 import {PropertyVisitor} from "./PropertyVisitor";
 
 interface ArrayIndex {
   [id: string]: number;
 }
 
-export abstract class Visitor<T extends Identified> implements WithLogger, Identified {
+export abstract class Visitor<R extends Identified, W extends R & Identified> implements WithLogger, Identified {
   protected constructor(
-    public readonly noun: string,
-    public readonly doCreate: boolean,
-    public readonly doUpdate: boolean,
-    public readonly doDelete: boolean,
-    public readonly logSkips: boolean,
     public readonly logger: Logger,
     public readonly id: string,
   ) {
   }
 
-  public getCollectionVisitors(): Promise<CollectionVisitor[]> {
+  public async commit(): Promise<void> {
+    throw new Error(`Not implemented: ${this.constructor.name}#commit`);
+  }
+
+  public async getCollectionVisitors(): Promise<CollectionVisitor[]> {
     return Promise.resolve([]);
   }
 
-  public getDocumentVisitors(): Promise<DocumentVisitor[]> {
+  public async getDocumentVisitors(): Promise<DocumentVisitor[]> {
     return Promise.resolve([]);
   }
 
-  public getPropertyVisitors(): Promise<PropertyVisitor[]> {
+  public async getPropertyVisitors(): Promise<PropertyVisitor[]> {
     return Promise.resolve([]);
   }
 
@@ -41,37 +39,20 @@ export abstract class Visitor<T extends Identified> implements WithLogger, Ident
     }, {} as { [id: string]: number });
   }
 
-  protected merge<M extends Identified, V extends Visitor<M>>(
-    readItems: M[],
-    writeItems: M[],
-    assembler: (read: M | undefined, write: M | undefined) => V,
+  protected merge<RR extends Identified, WW extends RR & Identified, V extends Visitor<RR, WW>>(
+    readItems: RR[],
+    writeItems: WW[],
+    readableBuilder: (writable: WW) => RR,
+    writableBuilder: (readable: RR) => WW,
+    assembler: (read: RR, write: WW) => V,
   ): V[] {
     const readIndex = this.makeIndex(readItems);
     const writeIndex = this.makeIndex(writeItems);
     return readItems
-      .map((readItem) => assembler(readItem, readItem.id in writeIndex ? writeItems[writeIndex[readItem.id]] : undefined))
+      .map((readItem) => assembler(readItem, readItem.id in writeIndex ? writeItems[writeIndex[readItem.id]] : writableBuilder(readItem)))
       .concat(writeItems
         .filter((writeItem) => !(writeItem.id in readIndex))
-        .map((writeItem) => assembler(undefined, writeItem)))
+        .map((writeItem) => assembler(readableBuilder(writeItem), writeItem)))
       .sort(sortById);
-  }
-
-  public visit(
-    readItem: T | undefined,
-    writeItem: T | undefined,
-    block: () => void,
-  ): void {
-    Fail.if(readItem == null && writeItem == null, 'visit', this,
-      () => `Unexpected: both read and write ${this.noun}s are undefined`);
-    if (
-      (readItem != null && writeItem != null && this.doUpdate) ||
-      (readItem != null && writeItem == null && this.doCreate) ||
-      (readItem == null && writeItem != null && this.doDelete)
-    ) {
-      block();
-    } else if (this.logSkips) {
-      const id = readItem != null ? readItem.id : writeItem != null ? writeItem.id : '?';
-      this.logger(this.constructor.name, 'visit', `Skip ${this.noun}: ${id}`);
-    }
   }
 }

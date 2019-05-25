@@ -15,6 +15,7 @@ import {
 
 export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<FirestoreSyncProfile> implements FirestoreSyncProfile {
   public readonly collectionReferencePrefix: string;
+  public readonly databaseURL: string;
   public readonly directory: string;
   public readonly documentReferencePrefix: string;
   public readonly fileNameCodec: FileNameCodec;
@@ -24,6 +25,7 @@ export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<Firestor
   public readonly nameCodec: FilesystemNameCodec;
   public readonly pull: FirestoreSyncProfileOperation;
   public readonly push: FirestoreSyncProfileOperation;
+  public readonly serviceAccountKeyPath: string;
   public readonly sync: FirestoreSyncOrder;
   public readonly timestampPrefix: string;
 
@@ -33,6 +35,7 @@ export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<Firestor
   ) {
     super(defaultProfile, providedProfile);
     this.collectionReferencePrefix = this.get('collectionReferencePrefix');
+    this.databaseURL = this.get('databaseURL');
     this.directory = this.get('directory');
     this.documentReferencePrefix = this.get('documentReferencePrefix');
     this.fileNameCodec = this.get('fileNameCodec');
@@ -40,6 +43,7 @@ export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<Firestor
     this.log = this.get('log');
     this.pull = this.get('pull');
     this.push = this.get('push');
+    this.serviceAccountKeyPath = this.get('serviceAccountKeyPath');
     this.sync = this.get('sync');
     this.timestampPrefix = this.get('timestampPrefix');
     const maybeOutputStream = ConsoleLogger.toOutputStream(this.log);

@@ -1,22 +1,34 @@
+import {CollectionLike} from "../base/CollectionLike";
+import {DocumentLike} from "../base/DocumentLike";
 import {ReadableStore} from "../base/ReadableStore";
 import {StoreLike} from "../base/StoreLike";
+import {WritableCollectionLike} from "../base/WritableCollectionLike";
+import {WritableDocumentLike} from "../base/WritableDocumentLike";
 import {WritableStore} from "../base/WritableStore";
+import {WritableStoreLike} from "../base/WritableStoreLike";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {CollectionVisitor} from "./CollectionVisitor";
 import {Visitor} from "./Visitor";
 
-export class StoreVisitor extends Visitor<StoreLike> {
+export class StoreVisitor extends Visitor<StoreLike, WritableStoreLike> {
   constructor(
-    private readonly readStore: ReadableStore<any, any>,
-    private readonly writeStore: WritableStore<any, any>,
+    private readonly readStore: ReadableStore<CollectionLike<any>, DocumentLike>,
+    private readonly writeStore: WritableStore<CollectionLike<any>, WritableCollectionLike<any, any>, DocumentLike, WritableDocumentLike>,
     private readonly config: FirestoreSyncProfileOperationAdapter,
+    id: string,
   ) {
-    super('store', true, true, false, true, config.logger, '');
+    super(config.logger, id);
   }
 
   public async getCollectionVisitors(): Promise<CollectionVisitor[]> {
-    const readCollections = await this.readStore.getCollections();
-    const writeCollections = await this.readStore.getCollections();
-    return this.merge(readCollections, writeCollections, (r, w) => new CollectionVisitor(this.config, r, w));
+    const readCollections = await this.readStore.getReadableCollections();
+    const writeCollections = await this.writeStore.getWritableCollections();
+    return this.merge(
+      readCollections,
+      writeCollections,
+      (writable) => this.readStore.buildEmptyReadableCollection(writable),
+      (readable) => this.writeStore.buildEmptyWritableCollection(readable),
+      (r, w) => new CollectionVisitor(this.config, r, w),
+    );
   }
 }

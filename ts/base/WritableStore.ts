@@ -1,7 +1,17 @@
 import {CollectionLike} from "./CollectionLike";
 import {DocumentLike} from "./DocumentLike";
 import {ReadableStore} from "./ReadableStore";
+import {WritableCollectionLike} from "./WritableCollectionLike";
+import {WritableDocumentLike} from "./WritableDocumentLike";
 
-export interface WritableStore<C extends CollectionLike<D>, D extends DocumentLike> extends ReadableStore<C, D> {
+export interface WritableStore<RC extends CollectionLike<RD>,
+  WC extends RC & WritableCollectionLike<RD, WD>,
+  RD extends DocumentLike,
+  WD extends WritableDocumentLike & RD,
+  > extends ReadableStore<RC, RD> {
+  buildEmptyWritableCollection(collection: CollectionLike<any>): WC;
+
   createCollection(collection: CollectionLike<any>): void;
+
+  getWritableCollections(): Promise<WC[]>;
 }

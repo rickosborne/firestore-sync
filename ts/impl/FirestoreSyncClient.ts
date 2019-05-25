@@ -8,10 +8,8 @@ import {
 import {FirestoreSyncConfigAdapter} from "../config/FirestoreSyncConfigAdapter";
 import {FirestoreSyncProfileAdapter} from "../config/FirestoreSyncProfileAdapter";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
-import {FilesystemReader} from "../filesystem/FilesystemReader";
-import {FilesystemWriter} from "../filesystem/FilesystemWriter";
-import {FirestoreReader} from "../firestore/FirestoreReader";
-import {FirestoreWriter} from "../firestore/FirestoreWriter";
+import {FilesystemStore, WritableFilesystemStore} from "../filesystem/FilesystemStore";
+import {FirestoreStore, FirestoreWriter} from "../firestore/FirestoreStore";
 import {StoreVisitor} from "./StoreVisitor";
 import {SyncWalker} from "./SyncWalker";
 
@@ -29,7 +27,6 @@ export class FirestoreSyncClient {
     if (!this.config.hasProfile(profileName)) {
       throw new Error(`Profile not found: ${profileName}`);
     }
-    console.error(`TODO: operation=${operation} profile=${profileName} config=${JSON.stringify(this.config, null, 2)}`);
     const profile = this.config.getProfile(profileName);
     if (operation === FirestoreSyncOperation.PULL) {
       await this.pull(profile);
@@ -45,14 +42,14 @@ export class FirestoreSyncClient {
   // noinspection JSMethodCanBeStatic
   public async pull(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.pull);
-    const storeVisitor = new StoreVisitor(new FirestoreReader(operation), new FilesystemWriter(operation), operation);
+    const storeVisitor = new StoreVisitor(new FirestoreStore(operation), new WritableFilesystemStore(operation), operation, 'pull');
     await new SyncWalker().walkCollections(storeVisitor);
   }
 
   // noinspection JSMethodCanBeStatic
   private async push(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.push);
-    const storeVisitor = new StoreVisitor(new FilesystemReader(operation), new FirestoreWriter(operation), operation);
+    const storeVisitor = new StoreVisitor(new FilesystemStore(operation), new FirestoreWriter(operation), operation, 'push');
     await new SyncWalker().walkCollections(storeVisitor);
   }
 

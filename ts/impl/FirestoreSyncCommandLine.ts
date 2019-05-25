@@ -1,4 +1,5 @@
 import arg = require('arg');
+import * as console from "console";
 import * as fs from 'fs';
 import {
   CONFIG_NAME_DEFAULT,
@@ -78,7 +79,7 @@ export class FirestoreSyncCommandLine {
     this.profileName = profileName;
   }
 
-  public run() {
+  public run(): void {
     if (this.showDefaults) {
       this.logger(JSON.stringify(DEFAULT_CONFIG, null, 2));
       return;
@@ -94,7 +95,13 @@ export class FirestoreSyncCommandLine {
       }
       const config: FirestoreSyncConfig = JSON.parse(configJSON);
       const client = new FirestoreSyncClient(config);
-      client.perform(this.operation, this.profileName);
+      client.perform(this.operation, this.profileName).catch((reason) => {
+        if (reason instanceof Error) {
+          console.error(`Error name: ${reason.name}\nError message: ${reason.message}\n${reason.stack}`);
+        } else if (reason != null) {
+          console.error(reason.constructor.name + ': ' + JSON.stringify(reason));
+        }
+      });
     });
   }
 }

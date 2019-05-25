@@ -1,30 +1,28 @@
 import {DocumentLike} from "../base/DocumentLike";
 import {identify} from "../base/Identified";
+import {WritableDocumentLike} from "../base/WritableDocumentLike";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
-import {PropertyLike} from "./PropertyLike";
 import {PropertyVisitor} from "./PropertyVisitor";
 import {Visitor} from "./Visitor";
 
-export class DocumentVisitor extends Visitor<DocumentLike> {
+export class DocumentVisitor extends Visitor<DocumentLike, WritableDocumentLike> {
   constructor(
     private readonly config: FirestoreSyncProfileOperationAdapter,
-    private readonly readDocument: DocumentLike | undefined,
-    private readonly writeDocument: DocumentLike | undefined,
+    private readonly readDocument: DocumentLike,
+    private readonly writeDocument: WritableDocumentLike,
   ) {
-    super(
-      'document',
-      config.createDocuments,
-      config.updateDocuments,
-      config.deleteDocuments,
-      config.logSkips,
-      config.logger,
-      identify(readDocument, writeDocument),
-    );
+    super(config.logger, identify(readDocument, writeDocument));
   }
 
   public async getPropertyVisitors(): Promise<PropertyVisitor[]> {
-    const readProperties = this.readDocument == null ? [] : await this.readDocument.getProperties();
-    const writeProperties = this.writeDocument == null ? [] : await this.writeDocument.getProperties();
-    return this.merge(readProperties, writeProperties, (r, w) => new PropertyVisitor(this.config, r, w));
+    const readProperties = await this.readDocument.getReadableProperties();
+    const writeProperties = await this.writeDocument.getWritableProperties();
+    return this.merge(
+      readProperties,
+      writeProperties,
+      (prop) => this.readDocument.buildEmptyReadableProperty(prop),
+      (prop) => this.writeDocument.buildEmptyWritableProperty(prop),
+      (r, w) => new PropertyVisitor(this.config, r, w),
+    );
   }
 }
