@@ -11,10 +11,16 @@ import {Visitor} from "./Visitor";
 export class DocumentVisitor extends Visitor<DocumentLike, WritableDocumentLike> {
   constructor(
     config: FirestoreSyncProfileOperationAdapter,
-    private readonly readDocument: DocumentLike,
-    private readonly writeDocument: WritableDocumentLike,
+    readDocument: DocumentLike,
+    writeDocument: WritableDocumentLike,
   ) {
-    super(identify(readDocument, writeDocument), pathify(readDocument, writeDocument), config);
+    super(
+      identify(readDocument, writeDocument),
+      pathify(readDocument, writeDocument),
+      readDocument,
+      writeDocument,
+      config,
+    );
   }
 
   public async applyHasEffect(): Promise<boolean> {
@@ -23,7 +29,7 @@ export class DocumentVisitor extends Visitor<DocumentLike, WritableDocumentLike>
   }
 
   protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): OpApply {
-    return this.buildGenericApply(this.readDocument, this.writeDocument, this.config.logSkips, action, doAction, effects, logAction);
+    return this.buildGenericApply(this.config.logSkips, action, doAction, effects, logAction);
   }
 
   public async commit(): Promise<void> {
@@ -31,21 +37,19 @@ export class DocumentVisitor extends Visitor<DocumentLike, WritableDocumentLike>
   }
 
   public async getPropertyVisitors(): Promise<PropertyVisitor[]> {
-    const readProperties = await this.readDocument.getReadableProperties();
-    const writeProperties = await this.writeDocument.getWritableProperties();
+    const readProperties = await this.readItem.getReadableProperties();
+    const writeProperties = await this.writeItem.getWritableProperties();
     return this.merge(
       readProperties,
       writeProperties,
-      (prop) => this.readDocument.buildEmptyReadableProperty(prop),
-      (prop) => this.writeDocument.buildEmptyWritableProperty(prop),
+      (prop) => this.readItem.buildEmptyReadableProperty(prop),
+      (prop) => this.writeItem.buildEmptyWritableProperty(prop),
       (r, w) => new PropertyVisitor(this.config, r, w),
     );
   }
 
   public async prepare(): Promise<TransactionOp> {
     return this.prepareGeneric(
-      this.readDocument,
-      this.writeDocument,
       this.config.createDocuments,
       this.config.updateDocuments,
       this.config.updateDocuments,

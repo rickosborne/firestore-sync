@@ -42,14 +42,24 @@ export class FirestoreSyncClient {
   // noinspection JSMethodCanBeStatic
   public async pull(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.pull);
-    const storeVisitor = new StoreVisitor(new FirestoreStore(operation), new WritableFilesystemStore(operation), operation, 'pull');
+    const storeVisitor = new StoreVisitor(
+      new FirestoreStore(profile.databaseURL, operation),
+      new WritableFilesystemStore('>local', operation),
+      operation,
+      'pull',
+    );
     await new SyncWalker().walkCollections(storeVisitor);
   }
 
   // noinspection JSMethodCanBeStatic
   private async push(profile: FirestoreSyncProfileAdapter): Promise<void> {
     const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.push);
-    const storeVisitor = new StoreVisitor(new FilesystemStore(operation), new FirestoreWriter(operation), operation, 'push');
+    const storeVisitor = new StoreVisitor(
+      new FilesystemStore('<local', operation),
+      new FirestoreWriter(profile.databaseURL, operation),
+      operation,
+      'push',
+    );
     await new SyncWalker().walkCollections(storeVisitor);
   }
 

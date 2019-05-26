@@ -1,7 +1,7 @@
 import {identify} from "../base/Identified";
 import {PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
-import {TransactionOp} from "./TransactionOp";
+import {OpAction, OpStatus, TransactionOp} from "./TransactionOp";
 import {Visitor} from "./Visitor";
 
 export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike> {
@@ -9,20 +9,30 @@ export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike>
 
   constructor(
     config: FirestoreSyncProfileOperationAdapter,
-    private readonly readProperty: PropertyLike,
-    private readonly writeProperty: WritablePropertyLike,
+    readProperty: PropertyLike,
+    writeProperty: WritablePropertyLike,
   ) {
-    super(identify(readProperty, writeProperty), identify(readProperty, writeProperty), config);
+    super(
+      identify(readProperty, writeProperty),
+      identify(readProperty, writeProperty),
+      readProperty,
+      writeProperty,
+      config,
+    );
   }
 
   public applyHasEffect(): boolean {
     return this.getPropertyVisitors().find((pv) => pv.applyHasEffect()) != null;
   }
 
+  protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): () => Promise<OpStatus> {
+    return this.buildGenericApply(this.config.logSkips, action, doAction, effects, logAction);
+  }
+
   public getPropertyVisitors(): PropertyVisitor[] {
     if (this.propertyVisitors == null) {
-      const readProperties = this.readProperty.getReadableProperties();
-      const writeProperties = this.writeProperty.getWritableProperties();
+      const readProperties = this.readItem.getReadableProperties();
+      const writeProperties = this.writeItem.getWritableProperties();
       this.propertyVisitors = this.merge(
         readProperties,
         writeProperties,
@@ -36,8 +46,6 @@ export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike>
 
   public async prepare(): Promise<TransactionOp> {
     return this.prepareGeneric(
-      this.readProperty,
-      this.writeProperty,
       this.config.createValues,
       this.config.updateValues,
       this.config.deleteValues,

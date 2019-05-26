@@ -15,13 +15,15 @@ interface ArrayIndex {
   [id: string]: number;
 }
 
-export abstract class Visitor<R extends Like, W extends R & Like> implements WithLogger, Identified, Pathed {
+export abstract class Visitor<R extends Like, W extends R & Like & Updatable<R>> implements WithLogger, Identified, Pathed {
   protected anyEffect?: boolean;
   public readonly logger: Logger;
 
   protected constructor(
     public readonly id: string,
     public readonly path: string,
+    protected readonly readItem: R,
+    protected readonly writeItem: W,
     protected readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
     this.logger = config.logger;
@@ -34,8 +36,6 @@ export abstract class Visitor<R extends Like, W extends R & Like> implements Wit
   }
 
   protected buildGenericApply(
-    readItem: R,
-    writeItem: W & Updatable<R>,
     logSkips: boolean,
     action: OpAction,
     doAction: boolean,
@@ -49,7 +49,7 @@ export abstract class Visitor<R extends Like, W extends R & Like> implements Wit
           if (logAction) {
             this.logger(this.constructor.name, commitAction, `Commit ${action}: ${this.id}`);
           }
-          return writeItem.updateFrom(readItem)
+          return this.writeItem.updateFrom(this.readItem)
             .then(() => OpStatus.SUCCESS)
             .catch(Fail.catchAndReturn(OpStatus.FAILED, commitAction, this));
         } else if (logSkips) {
@@ -85,7 +85,7 @@ export abstract class Visitor<R extends Like, W extends R & Like> implements Wit
     }, {} as { [id: string]: number });
   }
 
-  protected merge<RR extends Like, WW extends RR & Like, V extends Visitor<RR, WW>>(
+  protected merge<RR extends Like, WW extends RR & Like & Updatable<RR>, V extends Visitor<RR, WW>>(
     readItems: RR[],
     writeItems: WW[],
     readableBuilder: (writable: WW) => RR,
@@ -107,15 +107,13 @@ export abstract class Visitor<R extends Like, W extends R & Like> implements Wit
   }
 
   protected async prepareGeneric(
-    readItem: R,
-    writeItem: W,
     doCreate: boolean,
     doUpdate: boolean,
     doDelete: boolean,
   ): Promise<TransactionOp> {
     return Promise.all([
-      readItem.exists,
-      writeItem.exists,
+      this.readItem.exists,
+      this.writeItem.exists,
     ]).then(([readExists, writeExists]): TransactionOp | Promise<TransactionOp> => {
       if (readExists && writeExists) {
         return Promise.resolve(this.applyHasEffect())

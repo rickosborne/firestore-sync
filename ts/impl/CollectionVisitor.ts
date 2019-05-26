@@ -14,10 +14,16 @@ export class CollectionVisitor extends Visitor<CollectionLike<any>, WritableColl
 
   public constructor(
     config: FirestoreSyncProfileOperationAdapter,
-    private readonly readCollection: CollectionLike<any>,
-    private readonly writeCollection: WritableCollectionLike<any, any>,
+    readCollection: CollectionLike<any>,
+    writeCollection: WritableCollectionLike<any, any>,
   ) {
-    super(identify(readCollection, writeCollection), pathify(readCollection, writeCollection), config);
+    super(
+      identify(readCollection, writeCollection),
+      pathify(readCollection, writeCollection),
+      readCollection,
+      writeCollection,
+      config,
+    );
   }
 
   public async applyHasEffect(): Promise<boolean> {
@@ -33,7 +39,7 @@ export class CollectionVisitor extends Visitor<CollectionLike<any>, WritableColl
   }
 
   protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): OpApply {
-    return this.buildGenericApply(this.readCollection, this.writeCollection, this.config.logSkips, action, doAction, effects, logAction);
+    return this.buildGenericApply(this.config.logSkips, action, doAction, effects, logAction);
   }
 
   public async commit(): Promise<void> {
@@ -42,13 +48,13 @@ export class CollectionVisitor extends Visitor<CollectionLike<any>, WritableColl
 
   public async getDocumentVisitors(): Promise<DocumentVisitor[]> {
     if (this.documentVisitors == null) {
-      const readDocuments = await this.readCollection.getDocuments();
-      const writeDocuments = await this.writeCollection.getDocuments();
+      const readDocuments = await this.readItem.getDocuments();
+      const writeDocuments = await this.writeItem.getDocuments();
       this.documentVisitors = this.merge(
         readDocuments,
         writeDocuments,
-        (readDocument) => this.readCollection.buildEmptyReadableDocument(readDocument),
-        (writeDocument) => this.writeCollection.buildEmptyWritableDocument(writeDocument),
+        (readDocument) => this.readItem.buildEmptyReadableDocument(readDocument),
+        (writeDocument) => this.writeItem.buildEmptyWritableDocument(writeDocument),
         (r, w) => new DocumentVisitor(this.config, r, w),
       );
     }
@@ -57,8 +63,6 @@ export class CollectionVisitor extends Visitor<CollectionLike<any>, WritableColl
 
   public async prepare(): Promise<TransactionOp> {
     return this.prepareGeneric(
-      this.readCollection,
-      this.writeCollection,
       this.config.createCollections,
       this.config.updateCollections,
       this.config.deleteCollections,

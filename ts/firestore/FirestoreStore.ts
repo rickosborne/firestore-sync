@@ -12,7 +12,12 @@ export class FirestoreStore implements ReadableStore<FirestoreCollection, Firest
   protected readonly firestore: FirebaseFirestore.Firestore;
   public readonly logger: Logger;
 
+  public get exists(): Promise<boolean> {
+    return this.firestore.runTransaction(() => Promise.resolve(true));
+  }
+
   constructor(
+    public readonly id: string,
     private readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
     this.logger = config.logger;
@@ -36,9 +41,10 @@ export class FirestoreStore implements ReadableStore<FirestoreCollection, Firest
 export class FirestoreWriter extends FirestoreStore
   implements WritableStore<FirestoreCollection, WritableFirestoreCollection, FirestoreDocument, WritableFirestoreDocument> {
   constructor(
+    id: string,
     config: FirestoreSyncProfileOperationAdapter,
   ) {
-    super(config);
+    super(id, config);
   }
 
   public buildEmptyWritableCollection(collection: CollectionLike<any>): WritableFirestoreCollection {
@@ -52,5 +58,9 @@ export class FirestoreWriter extends FirestoreStore
   public async getWritableCollections(): Promise<WritableFirestoreCollection[]> {
     const firestoreCollections = await this.firestore.listCollections();
     return firestoreCollections.map((collectionRef) => new WritableFirestoreCollection(collectionRef, this.logger));
+  }
+
+  public async updateFrom(item: ReadableStore<FirestoreCollection, FirestoreDocument>): Promise<void> {
+    notImplemented(this, 'updateFrom');
   }
 }
