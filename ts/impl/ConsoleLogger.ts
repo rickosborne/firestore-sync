@@ -1,4 +1,5 @@
 import {Logger} from "../base/Logger";
+import {notImplemented} from "./NotImplemented";
 
 export enum StandardOutputStream {
   STDOUT = 'STDOUT',
@@ -13,7 +14,7 @@ export class ConsoleLogger {
       case StandardOutputStream.STDERR:
         return console.error;
       default:
-        throw new Error(`Unknown or unimplemented stream: ${stream}`);
+        return notImplemented('ConsoleLogger', `forStream(${stream})`);
     }
   }
 

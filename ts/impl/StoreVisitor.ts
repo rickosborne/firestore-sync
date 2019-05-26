@@ -8,27 +8,46 @@ import {WritableStore} from "../base/WritableStore";
 import {WritableStoreLike} from "../base/WritableStoreLike";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {CollectionVisitor} from "./CollectionVisitor";
+import {notImplemented} from "./NotImplemented";
+import {firstToResolveLike} from "./PromiseUtil";
+import {TransactionOp} from "./TransactionOp";
 import {Visitor} from "./Visitor";
 
 export class StoreVisitor extends Visitor<StoreLike, WritableStoreLike> {
+  protected collectionVisitors?: CollectionVisitor[];
+
   constructor(
     private readonly readStore: ReadableStore<CollectionLike<any>, DocumentLike>,
     private readonly writeStore: WritableStore<CollectionLike<any>, WritableCollectionLike<any, any>, DocumentLike, WritableDocumentLike>,
-    private readonly config: FirestoreSyncProfileOperationAdapter,
+    config: FirestoreSyncProfileOperationAdapter,
     id: string,
   ) {
-    super(config.logger, id);
+    super(id, '', config);
+  }
+
+  protected async applyHasEffect(): Promise<boolean> {
+    return this.getCollectionVisitors()
+      .then((cvs) => cvs.map((cv) => cv.applyHasEffect()))
+      .then((effects) => firstToResolveLike(effects, (effect) => effect))
+      .then((effect) => effect === true);
   }
 
   public async getCollectionVisitors(): Promise<CollectionVisitor[]> {
-    const readCollections = await this.readStore.getReadableCollections();
-    const writeCollections = await this.writeStore.getWritableCollections();
-    return this.merge(
-      readCollections,
-      writeCollections,
-      (writable) => this.readStore.buildEmptyReadableCollection(writable),
-      (readable) => this.writeStore.buildEmptyWritableCollection(readable),
-      (r, w) => new CollectionVisitor(this.config, r, w),
-    );
+    if (this.collectionVisitors == null) {
+      const readCollections = await this.readStore.getReadableCollections();
+      const writeCollections = await this.writeStore.getWritableCollections();
+      this.collectionVisitors = this.merge(
+        readCollections,
+        writeCollections,
+        (writable) => this.readStore.buildEmptyReadableCollection(writable),
+        (readable) => this.writeStore.buildEmptyWritableCollection(readable),
+        (r, w) => new CollectionVisitor(this.config, r, w),
+      );
+    }
+    return this.collectionVisitors;
+  }
+
+  public async prepare(): Promise<TransactionOp> {
+    return notImplemented(this, 'prepare');
   }
 }

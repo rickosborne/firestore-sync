@@ -6,7 +6,8 @@ export class SyncWalker {
     const collectionVisitors = await visitor.getCollectionVisitors();
     for (const collectionVisitor of collectionVisitors) {
       await this.walkDocuments(collectionVisitor);
-      await collectionVisitor.commit();
+      const op = await collectionVisitor.prepare();
+      await op.apply();
     }
   }
 
@@ -15,7 +16,8 @@ export class SyncWalker {
     for (const documentVisitor of documentVisitors) {
       await this.walkCollections(documentVisitor);
       await this.walkProperties(documentVisitor);
-      await documentVisitor.commit();
+      const op = await documentVisitor.prepare();
+      await op.apply();
     }
   }
 
@@ -23,7 +25,8 @@ export class SyncWalker {
     const propertyVisitors = await visitor.getPropertyVisitors();
     for (const propertyVisitor of propertyVisitors) {
       await this.walkProperties(propertyVisitor);
-      await propertyVisitor.commit();
+      const op = await propertyVisitor.prepare();
+      await op.apply();
     }
   }
 }

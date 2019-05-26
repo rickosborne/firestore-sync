@@ -1,11 +1,12 @@
 import * as fs from "fs";
-import * as path from "path";
-import {CollectionLike} from "../base/CollectionLike";
+import * as osPath from "path";
+import {COLLECTION_ROOT_PATH, CollectionLike} from "../base/CollectionLike";
 import {Logger, WithLogger} from "../base/Logger";
 import {ReadableStore} from "../base/ReadableStore";
 import {WritableStore} from "../base/WritableStore";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {Fail} from "../impl/Fail";
+import {notImplemented} from "../impl/NotImplemented";
 import {FilesystemCollection, WritableFilesystemCollection} from "./FilesystemCollection";
 import {FilesystemDocument, WritableFilesystemDocument} from "./FilesystemDocument";
 import {FilesystemNameCodec} from "./FilesystemNameCodec";
@@ -24,12 +25,12 @@ export class FilesystemStore implements ReadableStore<FilesystemCollection, File
   }
 
   public buildEmptyReadableCollection(writableCollection: CollectionLike<any>): FilesystemCollection {
-    return new FilesystemCollection(writableCollection.id, this.directory, this.nameCodec, this.logger);
+    return new FilesystemCollection(writableCollection.id, this.directory, COLLECTION_ROOT_PATH, this.nameCodec, this.logger);
   }
 
   protected async getCollectionsWithBuilder<C extends FilesystemCollection>(
     createDataDirectory: boolean,
-    builder: (id: string, directory: string) => C,
+    builder: (id: string, directory: string, path: string) => C,
   ): Promise<C[]> {
     return new Promise((resolve) => {
       fs.stat(this.directory, (statErr, stats) => {
@@ -43,10 +44,14 @@ export class FilesystemStore implements ReadableStore<FilesystemCollection, File
           Fail.when(readErr, 'eachCollection', this, () => `Could not readdir "${this.directory}"`);
           const collections = files
             .filter((file) => file.isDirectory())
-            .map((dir) => builder(
-              this.nameCodec.decode(dir.name),
-              path.join(this.directory, dir.name),
-            ));
+            .map((dir) => {
+              const docId = this.nameCodec.decode(dir.name);
+              return builder(
+                docId,
+                osPath.join(this.directory, dir.name),
+                COLLECTION_ROOT_PATH + docId,
+              );
+            });
           resolve(collections);
         });
       });
@@ -54,7 +59,9 @@ export class FilesystemStore implements ReadableStore<FilesystemCollection, File
   }
 
   public async getReadableCollections(): Promise<FilesystemCollection[]> {
-    return this.getCollectionsWithBuilder(false, (id, directory) => new FilesystemCollection(id, directory, this.nameCodec, this.logger));
+    return this.getCollectionsWithBuilder(false, (id, directory, path) => {
+      return new FilesystemCollection(id, directory, path, this.nameCodec, this.logger);
+    });
   }
 
   protected idFromName(name: string): string {
@@ -79,20 +86,21 @@ export class WritableFilesystemStore extends FilesystemStore
   public buildEmptyWritableCollection(collection: CollectionLike<any>): WritableFilesystemCollection {
     return new WritableFilesystemCollection(
       collection.id,
-      path.join(this.directory, this.nameFromId(collection.id)),
+      osPath.join(this.directory, this.nameFromId(collection.id)),
+      collection.path,
       this.nameCodec,
       this.logger,
     );
   }
 
   public createCollection(collection: CollectionLike<any>): void {
-    throw new Error('Not implemented: FilesystemWriter#createCollection');
+    notImplemented(this, 'createCollection');
   }
 
   public getWritableCollections(): Promise<WritableFilesystemCollection[]> {
     return this.getCollectionsWithBuilder(
       true,
-      (id, directory) => new WritableFilesystemCollection(id, directory, this.nameCodec, this.logger),
+      (id, directory, path) => new WritableFilesystemCollection(id, directory, path, this.nameCodec, this.logger),
     );
   }
 }

@@ -4,6 +4,7 @@ import {Logger, WithLogger} from "../base/Logger";
 import {ReadableStore} from "../base/ReadableStore";
 import {WritableStore} from "../base/WritableStore";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
+import {notImplemented} from "../impl/NotImplemented";
 import {FirestoreCollection, WritableFirestoreCollection} from "./FirestoreCollection";
 import {FirestoreDocument, WritableFirestoreDocument} from "./FirestoreDocument";
 
@@ -45,7 +46,7 @@ export class FirestoreWriter extends FirestoreStore
   }
 
   public createCollection(collection: CollectionLike<any>): void {
-    throw new Error('Not implemented: FirestoreWriter#createCollection');
+    notImplemented(this, 'createCollection');
   }
 
   public async getWritableCollections(): Promise<WritableFirestoreCollection[]> {

@@ -6,4 +6,6 @@ export interface WritableCollectionLike<RD extends DocumentLike, WD extends RD &
   buildEmptyWritableDocument(readableDocument: DocumentLike): WD;
 
   getDocuments(): Promise<WD[]>;
+
+  updateFrom(collection: CollectionLike<any>): Promise<void>;
 }

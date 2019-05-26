@@ -12,5 +12,5 @@ export function identify(...items: Array<Identified | undefined>): string {
       return item.id;
     }
   }
-  throw new Error('Expected at least one defined item');
+  throw new Error('Expected at least one defined Identified');
 }
