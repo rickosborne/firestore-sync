@@ -32,6 +32,7 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
 
   constructor(
     private readonly documentRef: admin.firestore.DocumentReference,
+    public readonly dryRun: boolean,
     public readonly logger: Logger,
   ) {
     this.id = documentRef.id;
@@ -47,7 +48,7 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
     if (data == null) {
       return [];
     }
-    return buildReadablePropertyLike(this.id + ':' + DOCUMENT_ROOT_PATH, this.path, DOCUMENT_ROOT_PATH, data, this.logger);
+    return buildReadablePropertyLike(this.id + ':' + DOCUMENT_ROOT_PATH, this.path, DOCUMENT_ROOT_PATH, data, this.dryRun, this.logger);
   }
 
   public updateFrom(document: DocumentLike): Promise<void> {
@@ -57,13 +58,6 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
 
 // tslint:disable-next-line:max-classes-per-file
 export class WritableFirestoreDocument extends FirestoreDocument implements WritableDocumentLike {
-  constructor(
-    documentRef: admin.firestore.DocumentReference,
-    logger: Logger,
-  ) {
-    super(documentRef, logger);
-  }
-
   public buildEmptyWritableProperty(property: PropertyLike): WritablePropertyLike {
     return property.buildEmptyWritableProperty();
   }
@@ -73,6 +67,6 @@ export class WritableFirestoreDocument extends FirestoreDocument implements Writ
     if (data == null) {
       return [];
     }
-    return buildWritablePropertyLike(this.id + ':', this.path, DOCUMENT_ROOT_PATH, data, this.logger);
+    return buildWritablePropertyLike(this.id + ':', this.path, DOCUMENT_ROOT_PATH, data, this.dryRun, this.logger);
   }
 }

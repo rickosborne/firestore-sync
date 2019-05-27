@@ -32,6 +32,7 @@ export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<Firestor
   constructor(
     public readonly defaultProfile: FirestoreSyncProfile = DEFAULT_PROFILE,
     public readonly providedProfile?: FirestoreSyncProfile,
+    public readonly dryRun: boolean = false,
   ) {
     super(defaultProfile, providedProfile);
     this.collectionReferencePrefix = this.get('collectionReferencePrefix');

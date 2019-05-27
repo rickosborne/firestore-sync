@@ -26,6 +26,7 @@ abstract class BaseProperty {
     public readonly documentPath: string,
     public readonly valuePath: string,
     public readonly value: any,
+    public readonly dryRun: boolean,
     public readonly logger: Logger,
     public readonly type = typeof value,
     public readonly exists = hasAnyValue(value),
@@ -35,7 +36,7 @@ abstract class BaseProperty {
 
   // noinspection JSUnusedGlobalSymbols
   public getReadableProperties(): PropertyLike[] {
-    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.logger);
+    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -52,12 +53,13 @@ export class KeyedProperty extends BaseProperty implements PropertyLike {
     valuePath: string,
     public readonly key: string,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
   }
 
   public buildEmptyReadableProperty(): PropertyLike {
@@ -67,6 +69,7 @@ export class KeyedProperty extends BaseProperty implements PropertyLike {
       this.valuePath,
       this.key,
       undefined,  // empty
+      this.dryRun,
       this.logger,
       this.type,  // ... but the correct type
       false,  // empty
@@ -81,6 +84,7 @@ export class KeyedProperty extends BaseProperty implements PropertyLike {
       this.valuePath,
       this.key,
       undefined,  // empty
+      this.dryRun,
       this.logger,
       this.type,  // ... but the correct type
       false,  // empty
@@ -99,16 +103,17 @@ export class WritableKeyedProperty extends KeyedProperty implements WritableProp
     valuePath: string,
     key: string,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, key, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, key, value, dryRun, logger, type, exists, isScalar);
   }
 
   public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.logger);
+    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
   }
 
   public async updateFrom(readProperty: PropertyLike): Promise<void> {
@@ -123,16 +128,27 @@ export class BasicProperty extends BaseProperty implements PropertyLike {
     documentPath: string,
     valuePath: string,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
   }
 
   public buildEmptyReadableProperty(): PropertyLike {
-    return new BasicProperty(this.id, this.documentPath, this.valuePath, undefined, this.logger, this.type, false, this.isScalar);
+    return new BasicProperty(
+      this.id,
+      this.documentPath,
+      this.valuePath,
+      undefined,
+      this.dryRun,
+      this.logger,
+      this.type,
+      false,
+      this.isScalar,
+    );
   }
 
   public buildEmptyWritableProperty(): WritablePropertyLike {
@@ -141,6 +157,7 @@ export class BasicProperty extends BaseProperty implements PropertyLike {
       this.documentPath,
       this.valuePath,
       undefined,
+      this.dryRun,
       this.logger,
       this.type,
       false,
@@ -156,16 +173,17 @@ export class WritableBasicProperty extends BasicProperty implements WritableProp
     documentPath: string,
     valuePath: string,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
   }
 
   public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.logger);
+    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
   }
 
   public async updateFrom(readProperty: PropertyLike): Promise<void> {
@@ -181,12 +199,13 @@ export class ArrayEntryProperty extends BaseProperty implements PropertyLike {
     valuePath: string,
     public readonly index: number,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
   }
 
   public buildEmptyReadableProperty(): PropertyLike {
@@ -196,6 +215,7 @@ export class ArrayEntryProperty extends BaseProperty implements PropertyLike {
       this.valuePath,
       this.index,
       undefined,
+      this.dryRun,
       this.logger,
       this.type,
       false,
@@ -210,6 +230,7 @@ export class ArrayEntryProperty extends BaseProperty implements PropertyLike {
       this.valuePath,
       this.index,
       undefined,
+      this.dryRun,
       this.logger,
       this.type,
       false,
@@ -218,7 +239,7 @@ export class ArrayEntryProperty extends BaseProperty implements PropertyLike {
   }
 
   public getReadableProperties(): PropertyLike[] {
-    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.logger);
+    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
   }
 }
 
@@ -230,16 +251,17 @@ export class WritableArrayEntryProperty extends ArrayEntryProperty implements Wr
     valuePath: string,
     index: number,
     value: any,
+    dryRun: boolean,
     logger: Logger,
     type = typeof value,
     exists = hasAnyValue(value),
     isScalar = hasScalarValue(value),
   ) {
-    super(id, documentPath, valuePath, index, value, logger, type, exists, isScalar);
+    super(id, documentPath, valuePath, index, value, dryRun, logger, type, exists, isScalar);
   }
 
   public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.logger);
+    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
   }
 
   public async updateFrom(readProperty: PropertyLike): Promise<void> {
@@ -252,6 +274,7 @@ export function buildWritablePropertyLike(
   documentPath: string,
   valuePath: string,
   value: any,
+  dryRun: boolean,
   logger: Logger,
 ): WritablePropertyLike[] {
   return buildPropertyLike(
@@ -259,9 +282,9 @@ export function buildWritablePropertyLike(
     documentPath,
     valuePath,
     value,
-    (_id, dp, vp, _value) => new WritableBasicProperty(_id, dp, vp, _value, logger),
-    (_id, dp, vp, key, _value) => new WritableKeyedProperty(_id, dp, vp, key, _value, logger),
-    (_id, dp, vp, index, _value) => new WritableArrayEntryProperty(_id, dp, vp, index, _value, logger),
+    (_id, dp, vp, _value) => new WritableBasicProperty(_id, dp, vp, _value, dryRun, logger),
+    (_id, dp, vp, key, _value) => new WritableKeyedProperty(_id, dp, vp, key, _value, dryRun, logger),
+    (_id, dp, vp, index, _value) => new WritableArrayEntryProperty(_id, dp, vp, index, _value, dryRun, logger),
   );
 }
 
@@ -270,6 +293,7 @@ export function buildReadablePropertyLike(
   documentPath: string,
   valuePath: string,
   value: any,
+  dryRun: boolean,
   logger: Logger,
 ): PropertyLike[] {
   return buildPropertyLike(
@@ -277,9 +301,9 @@ export function buildReadablePropertyLike(
     documentPath,
     valuePath,
     value,
-    (_id, dp, vp, _value) => new BasicProperty(_id, dp, vp, _value, logger),
-    (_id, dp, vp, key, _value) => new KeyedProperty(_id, dp, vp, key, _value, logger),
-    (_id, dp, vp, index, _value) => new ArrayEntryProperty(_id, dp, vp, index, _value, logger),
+    (_id, dp, vp, _value) => new BasicProperty(_id, dp, vp, _value, dryRun, logger),
+    (_id, dp, vp, key, _value) => new KeyedProperty(_id, dp, vp, key, _value, dryRun, logger),
+    (_id, dp, vp, index, _value) => new ArrayEntryProperty(_id, dp, vp, index, _value, dryRun, logger),
   );
 }
 

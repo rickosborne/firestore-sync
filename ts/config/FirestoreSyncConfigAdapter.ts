@@ -9,6 +9,7 @@ import {
 import {FirestoreSyncProfileAdapter} from "./FirestoreSyncProfileAdapter";
 
 export class FirestoreSyncConfigAdapter extends ProvidedDefaultAdapter<FirestoreSyncConfig> implements FirestoreSyncConfig {
+  public readonly dryRun: boolean;
   public readonly profiles: { [profileName: string]: FirestoreSyncProfile };
 
   public get defaultProfile(): FirestoreSyncProfileAdapter {
@@ -21,12 +22,14 @@ export class FirestoreSyncConfigAdapter extends ProvidedDefaultAdapter<Firestore
   ) {
     super(providedConfig, defaultConfig);
     this.profiles = this.get('profiles');
+    this.dryRun = providedConfig.dryRun === true;
   }
 
   public getProfile(profileName: string): FirestoreSyncProfileAdapter {
     return new FirestoreSyncProfileAdapter(
       DEFAULT_PROFILE,
       this.providedConfig.profiles != null ? this.providedConfig.profiles[profileName] : undefined,
+      this.dryRun,
     );
   }
 

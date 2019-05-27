@@ -34,11 +34,13 @@ Options:
                           Default: ${CONFIG_NAME_DEFAULT}
   -p, --profile name    Profile name within the config
                           Default: ${PROFILE_NAME_DEFAULT}
+  -d, --dry-run         Don't commit, just log and exit
       --defaults        Show a default configuration and exit
 `;
 
 export class FirestoreSyncCommandLine {
   public readonly configFileName: string;
+  public readonly dryRun: boolean;
   public readonly operation: FirestoreSyncOperation;
   public readonly profileName: string;
   public readonly showDefaults: boolean;
@@ -51,11 +53,13 @@ export class FirestoreSyncCommandLine {
     const args = arg({
       '--config': String,
       '--defaults': Boolean,
+      '--dry-run': Boolean,
       '--help': Boolean,
       '--profile': String,
       // aliases
       '-?': '--help',
       '-c': '--config',
+      '-d': '--dry-run',
       '-h': '--help',
       '-p': '--profile',
     }, {
@@ -66,6 +70,7 @@ export class FirestoreSyncCommandLine {
       '_': standalone = [],
       '--config': configFileName = CONFIG_NAME_DEFAULT,
       '--defaults': showDefaults = false,
+      '--dry-run': dryRun = false,
       '--help': showHelp = false,
       '--profile': profileName = PROFILE_NAME_DEFAULT,
     } = args;
@@ -74,6 +79,7 @@ export class FirestoreSyncCommandLine {
     const validOperation = SYNC_OPERATIONS.includes(maybeOperationName || '');
     this.operation = validOperation ? maybeOperationName as FirestoreSyncOperation : FirestoreSyncOperation.SYNC;
     this.configFileName = configFileName;
+    this.dryRun = dryRun;
     this.showHelp = showHelp || !validOperation;
     this.showDefaults = showDefaults;
     this.profileName = profileName;
@@ -94,6 +100,9 @@ export class FirestoreSyncCommandLine {
         throw new Error(err.message);
       }
       const config: FirestoreSyncConfig = JSON.parse(configJSON);
+      if (this.dryRun) {
+        config.dryRun = true;
+      }
       const client = new FirestoreSyncClient(config);
       client.perform(this.operation, this.profileName).catch((reason) => {
         if (reason instanceof Error) {

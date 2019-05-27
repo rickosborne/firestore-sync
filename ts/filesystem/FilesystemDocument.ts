@@ -40,6 +40,7 @@ export class FilesystemDocument implements DocumentLike, WithLogger {
     public readonly directory: string,
     public readonly path: string,
     public readonly fileName: string,
+    public readonly dryRun: boolean,
     public readonly logger: Logger,
   ) {
     this.fullPath = osPath.join(directory, this.fileName);
@@ -55,7 +56,9 @@ export class FilesystemDocument implements DocumentLike, WithLogger {
   }
 
   public async getReadableProperties(): Promise<PropertyLike[]> {
-    return await this.getPropertiesWithBuilder((id, obj) => buildReadablePropertyLike(id, this.path, DOCUMENT_ROOT_PATH, obj, this.logger));
+    return await this.getPropertiesWithBuilder((id, obj) => {
+      return buildReadablePropertyLike(id, this.path, DOCUMENT_ROOT_PATH, obj, this.dryRun, this.logger);
+    });
   }
 
   public load(block: (document: FilesystemDocument) => void) {
@@ -82,9 +85,10 @@ export class WritableFilesystemDocument extends FilesystemDocument implements Wr
     directory: string,
     path: string,
     fileName: string,
+    dryRun: boolean,
     logger: Logger,
   ) {
-    super(id, directory, path, fileName, logger);
+    super(id, directory, path, fileName, dryRun, logger);
   }
 
   public buildEmptyWritableProperty(property: PropertyLike): WritablePropertyLike {
@@ -92,6 +96,8 @@ export class WritableFilesystemDocument extends FilesystemDocument implements Wr
   }
 
   public async getWritableProperties(): Promise<WritablePropertyLike[]> {
-    return this.getPropertiesWithBuilder((id, obj) => buildWritablePropertyLike(id, this.path, DOCUMENT_ROOT_PATH, obj, this.logger));
+    return this.getPropertiesWithBuilder((id, obj) => {
+      return buildWritablePropertyLike(id, this.path, DOCUMENT_ROOT_PATH, obj, this.dryRun, this.logger);
+    });
   }
 }

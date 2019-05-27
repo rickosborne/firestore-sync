@@ -24,6 +24,7 @@ export class FirestoreCollection implements CollectionLike<FirestoreDocument>, W
 
   constructor(
     public readonly collectionRef: admin.firestore.CollectionReference,
+    public readonly dryRun: boolean,
     public readonly logger: Logger,
   ) {
     this.id = collectionRef.id;
@@ -31,24 +32,24 @@ export class FirestoreCollection implements CollectionLike<FirestoreDocument>, W
   }
 
   public buildEmptyReadableDocument(document: DocumentLike): FirestoreDocument {
-    return new FirestoreDocument(this.collectionRef.doc(document.id), this.logger);
+    return new FirestoreDocument(this.collectionRef.doc(document.id), this.dryRun, this.logger);
   }
 
   public async getDocuments(): Promise<FirestoreDocument[]> {
     const documentRefs = await this.collectionRef.listDocuments();
-    return documentRefs.map((documentRef) => new FirestoreDocument(documentRef, this.logger));
+    return documentRefs.map((documentRef) => new FirestoreDocument(documentRef, this.dryRun, this.logger));
   }
 }
 
 // tslint:disable-next-line
 export class WritableFirestoreCollection extends FirestoreCollection implements WritableCollectionLike<FirestoreDocument, WritableFirestoreDocument> {
   public buildEmptyWritableDocument(readableDocument: DocumentLike): WritableFirestoreDocument {
-    return new WritableFirestoreDocument(this.collectionRef.doc(readableDocument.id), this.logger);
+    return new WritableFirestoreDocument(this.collectionRef.doc(readableDocument.id), this.dryRun, this.logger);
   }
 
   public async getDocuments(): Promise<WritableFirestoreDocument[]> {
     const documentRefs = await this.collectionRef.listDocuments();
-    return documentRefs.map((documentRef) => new WritableFirestoreDocument(documentRef, this.logger));
+    return documentRefs.map((documentRef) => new WritableFirestoreDocument(documentRef, this.dryRun, this.logger));
   }
 
   public async updateFrom(collection: CollectionLike<any>): Promise<void> {

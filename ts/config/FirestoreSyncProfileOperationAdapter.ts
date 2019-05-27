@@ -11,6 +11,7 @@ export class FirestoreSyncProfileOperationAdapter extends ProvidedDefaultAdapter
   public readonly deleteCollections: boolean;
   public readonly deleteDocuments: boolean;
   public readonly deleteValues: boolean;
+  public readonly dryRun: boolean;
   public readonly logCreates: boolean;
   public readonly logDeletes: boolean;
   public readonly logger: Logger;
@@ -33,6 +34,7 @@ export class FirestoreSyncProfileOperationAdapter extends ProvidedDefaultAdapter
     this.deleteCollections = this.get('deleteCollections');
     this.deleteDocuments = this.get('deleteDocuments');
     this.deleteValues = this.get('deleteValues');
+    this.dryRun = this.get('dryRun');
     this.logCreates = this.get('logCreates');
     this.logDeletes = this.get('logDeletes');
     this.logSkips = this.get('logSkips');

@@ -13,19 +13,28 @@ import {FilesystemNameCodec} from "./FilesystemNameCodec";
 
 export class FilesystemStore implements ReadableStore<FilesystemCollection, FilesystemDocument>, WithLogger {
   protected readonly directory: string;
+  public readonly dryRun: boolean;
   public readonly logger: Logger;
   protected readonly nameCodec: FilesystemNameCodec;
 
+  public get exists(): Promise<boolean> {
+    return new Promise((resolve) => {
+      fs.stat(this.directory, (err, stats) => resolve(err ? false : stats.isDirectory()));
+    });
+  }
+
   constructor(
+    public readonly id: string,
     config: FirestoreSyncProfileOperationAdapter,
   ) {
     this.directory = config.profile.directory;
+    this.dryRun = config.profile.dryRun;
     this.logger = config.logger;
     this.nameCodec = config.profile.nameCodec;
   }
 
   public buildEmptyReadableCollection(writableCollection: CollectionLike<any>): FilesystemCollection {
-    return new FilesystemCollection(writableCollection.id, this.directory, COLLECTION_ROOT_PATH, this.nameCodec, this.logger);
+    return new FilesystemCollection(writableCollection.id, this.directory, COLLECTION_ROOT_PATH, this.nameCodec, this.dryRun, this.logger);
   }
 
   protected async getCollectionsWithBuilder<C extends FilesystemCollection>(
@@ -60,7 +69,7 @@ export class FilesystemStore implements ReadableStore<FilesystemCollection, File
 
   public async getReadableCollections(): Promise<FilesystemCollection[]> {
     return this.getCollectionsWithBuilder(false, (id, directory, path) => {
-      return new FilesystemCollection(id, directory, path, this.nameCodec, this.logger);
+      return new FilesystemCollection(id, directory, path, this.nameCodec, this.dryRun, this.logger);
     });
   }
 
@@ -78,9 +87,10 @@ export class WritableFilesystemStore extends FilesystemStore
   implements WritableStore<FilesystemCollection, WritableFilesystemCollection, FilesystemDocument, WritableFilesystemDocument> {
 
   constructor(
+    id: string,
     config: FirestoreSyncProfileOperationAdapter,
   ) {
-    super(config);
+    super(id, config);
   }
 
   public buildEmptyWritableCollection(collection: CollectionLike<any>): WritableFilesystemCollection {
@@ -89,6 +99,7 @@ export class WritableFilesystemStore extends FilesystemStore
       osPath.join(this.directory, this.nameFromId(collection.id)),
       collection.path,
       this.nameCodec,
+      this.dryRun,
       this.logger,
     );
   }
@@ -100,7 +111,11 @@ export class WritableFilesystemStore extends FilesystemStore
   public getWritableCollections(): Promise<WritableFilesystemCollection[]> {
     return this.getCollectionsWithBuilder(
       true,
-      (id, directory, path) => new WritableFilesystemCollection(id, directory, path, this.nameCodec, this.logger),
+      (id, directory, path) => new WritableFilesystemCollection(id, directory, path, this.nameCodec, this.dryRun, this.logger),
     );
+  }
+
+  public async updateFrom(item: ReadableStore<FilesystemCollection, FilesystemDocument>): Promise<void> {
+    notImplemented(this, 'updateFrom');
   }
 }

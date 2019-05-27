@@ -23,18 +23,19 @@ export class FilesystemCollection implements CollectionLike<FilesystemDocument>,
     protected readonly directory: string,
     public readonly path: string,
     protected readonly nameCodec: FilesystemNameCodec,
+    public readonly dryRun: boolean,
     public readonly logger: Logger,
   ) {
     this.name = nameCodec.encode(id);
   }
 
   public buildEmptyReadableDocument(document: DocumentLike): FilesystemDocument {
-    return new FilesystemDocument(document.id, this.directory, document.path, this.nameFromId(document.id), this.logger);
+    return new FilesystemDocument(document.id, this.directory, document.path, this.nameFromId(document.id), this.dryRun, this.logger);
   }
 
   public async getDocuments(): Promise<FilesystemDocument[]> {
     return this.getDocumentsWithBuilder(false, (id, name, path, directory) => {
-      return new FilesystemDocument(id, directory, path, name, this.logger);
+      return new FilesystemDocument(id, directory, path, name, this.dryRun, this.logger);
     });
   }
 
@@ -76,18 +77,26 @@ export class WritableFilesystemCollection extends FilesystemCollection implement
     directory: string,
     path: string,
     nameCodec: FilesystemNameCodec,
+    dryRun: boolean,
     logger: Logger,
   ) {
-    super(id, directory, path, nameCodec, logger);
+    super(id, directory, path, nameCodec, dryRun, logger);
   }
 
   public buildEmptyWritableDocument(document: DocumentLike): WritableFilesystemDocument {
-    return new WritableFilesystemDocument(document.id, this.directory, document.path, this.nameFromId(document.id), this.logger);
+    return new WritableFilesystemDocument(
+      document.id,
+      this.directory,
+      document.path,
+      this.nameFromId(document.id),
+      this.dryRun,
+      this.logger,
+    );
   }
 
   public async getDocuments(): Promise<WritableFilesystemDocument[]> {
     return this.getDocumentsWithBuilder(true, (id, name, path, directory) => {
-      return new WritableFilesystemDocument(id, directory, path, name, this.logger);
+      return new WritableFilesystemDocument(id, directory, path, name, this.dryRun, this.logger);
     });
   }
 
