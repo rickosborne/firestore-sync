@@ -4,6 +4,7 @@ import {CollectionLike} from "../base/CollectionLike";
 import {DocumentLike} from "../base/DocumentLike";
 import {Logger, WithLogger} from "../base/Logger";
 import {WritableCollectionLike} from "../base/WritableCollectionLike";
+import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {Fail} from "../impl/Fail";
 import {notImplemented} from "../impl/NotImplemented";
 import {FilesystemDocument, WritableFilesystemDocument} from "./FilesystemDocument";
@@ -12,30 +13,40 @@ import {FilesystemNameCodec} from "./FilesystemNameCodec";
 export class FilesystemCollection implements CollectionLike<FilesystemDocument>, WithLogger {
   private readonly name: string;
 
+  public get dryRun(): boolean {
+    return this.config.dryRun;
+  }
+
   public get exists(): Promise<boolean> {
     return new Promise((resolve) => {
       fs.stat(this.directory, (err, stats) => resolve(err ? false : stats.isDirectory()));
     });
   }
 
+  public get logger(): Logger {
+    return this.config.logger;
+  }
+
+  public get nameCodec(): FilesystemNameCodec {
+    return this.config.profile.nameCodec;
+  }
+
   constructor(
     public readonly id: string,
     protected readonly directory: string,
     public readonly path: string,
-    protected readonly nameCodec: FilesystemNameCodec,
-    public readonly dryRun: boolean,
-    public readonly logger: Logger,
+    protected readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
-    this.name = nameCodec.encode(id);
+    this.name = config.profile.nameCodec.encode(id);
   }
 
   public buildEmptyReadableDocument(document: DocumentLike): FilesystemDocument {
-    return new FilesystemDocument(document.id, this.directory, document.path, this.nameFromId(document.id), this.dryRun, this.logger);
+    return new FilesystemDocument(document.id, this.directory, document.path, this.nameFromId(document.id), this.config);
   }
 
   public async getDocuments(): Promise<FilesystemDocument[]> {
     return this.getDocumentsWithBuilder(false, (id, name, path, directory) => {
-      return new FilesystemDocument(id, directory, path, name, this.dryRun, this.logger);
+      return new FilesystemDocument(id, directory, path, name, this.config);
     });
   }
 
@@ -72,31 +83,19 @@ export class FilesystemCollection implements CollectionLike<FilesystemDocument>,
 
 // tslint:disable-next-line
 export class WritableFilesystemCollection extends FilesystemCollection implements WritableCollectionLike<FilesystemDocument, WritableFilesystemDocument> {
-  constructor(
-    id: string,
-    directory: string,
-    path: string,
-    nameCodec: FilesystemNameCodec,
-    dryRun: boolean,
-    logger: Logger,
-  ) {
-    super(id, directory, path, nameCodec, dryRun, logger);
-  }
-
   public buildEmptyWritableDocument(document: DocumentLike): WritableFilesystemDocument {
     return new WritableFilesystemDocument(
       document.id,
       this.directory,
       document.path,
       this.nameFromId(document.id),
-      this.dryRun,
-      this.logger,
+      this.config,
     );
   }
 
   public async getDocuments(): Promise<WritableFilesystemDocument[]> {
     return this.getDocumentsWithBuilder(true, (id, name, path, directory) => {
-      return new WritableFilesystemDocument(id, directory, path, name, this.dryRun, this.logger);
+      return new WritableFilesystemDocument(id, directory, path, name, this.config);
     });
   }
 

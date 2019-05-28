@@ -9,20 +9,24 @@ import {FirestoreCollection, WritableFirestoreCollection} from "./FirestoreColle
 import {FirestoreDocument, WritableFirestoreDocument} from "./FirestoreDocument";
 
 export class FirestoreStore implements ReadableStore<FirestoreCollection, FirestoreDocument>, WithLogger {
-  public readonly dryRun: boolean;
   protected readonly firestore: FirebaseFirestore.Firestore;
-  public readonly logger: Logger;
+
+  public get dryRun(): boolean {
+    return this.config.dryRun;
+  }
 
   public get exists(): Promise<boolean> {
     return this.firestore.runTransaction(() => Promise.resolve(true));
   }
 
+  public get logger(): Logger {
+    return this.config.logger;
+  }
+
   constructor(
     public readonly id: string,
-    private readonly config: FirestoreSyncProfileOperationAdapter,
+    protected readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
-    this.dryRun = config.dryRun;
-    this.logger = config.logger;
     this.firestore = admin.initializeApp({
       credential: admin.credential.cert(config.profile.serviceAccountKeyPath),
       databaseURL: config.profile.databaseURL,
@@ -30,12 +34,12 @@ export class FirestoreStore implements ReadableStore<FirestoreCollection, Firest
   }
 
   public buildEmptyReadableCollection(writableCollection: CollectionLike<any>): FirestoreCollection {
-    return new FirestoreCollection(this.firestore.collection(writableCollection.id), this.dryRun, this.logger);
+    return new FirestoreCollection(this.firestore.collection(writableCollection.id), this.config);
   }
 
   public async getReadableCollections(): Promise<FirestoreCollection[]> {
     const firestoreCollections = await this.firestore.listCollections();
-    return firestoreCollections.map((collectionRef) => new FirestoreCollection(collectionRef, this.dryRun, this.logger));
+    return firestoreCollections.map((collectionRef) => new FirestoreCollection(collectionRef, this.config));
   }
 }
 
@@ -50,7 +54,7 @@ export class FirestoreWriter extends FirestoreStore
   }
 
   public buildEmptyWritableCollection(collection: CollectionLike<any>): WritableFirestoreCollection {
-    return new WritableFirestoreCollection(this.firestore.collection(collection.id), this.dryRun, this.logger);
+    return new WritableFirestoreCollection(this.firestore.collection(collection.id), this.config);
   }
 
   public createCollection(collection: CollectionLike<any>): void {
@@ -59,7 +63,7 @@ export class FirestoreWriter extends FirestoreStore
 
   public async getWritableCollections(): Promise<WritableFirestoreCollection[]> {
     const firestoreCollections = await this.firestore.listCollections();
-    return firestoreCollections.map((collectionRef) => new WritableFirestoreCollection(collectionRef, this.dryRun, this.logger));
+    return firestoreCollections.map((collectionRef) => new WritableFirestoreCollection(collectionRef, this.config));
   }
 
   public async updateFrom(item: ReadableStore<FirestoreCollection, FirestoreDocument>): Promise<void> {

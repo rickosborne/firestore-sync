@@ -3,13 +3,12 @@ import {DocumentLike} from "../base/DocumentLike";
 import {Logger, WithLogger} from "../base/Logger";
 import {PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
 import {WritableDocumentLike} from "../base/WritableDocumentLike";
+import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {notImplemented} from "../impl/NotImplemented";
 import {buildReadablePropertyLike, buildWritablePropertyLike, DOCUMENT_ROOT_PATH} from "../impl/PropertyLikeBuilder";
 
 export class FirestoreDocument implements DocumentLike, WithLogger {
   protected dataPromise?: Promise<admin.firestore.DocumentData | undefined>;
-  public readonly id: string;
-  public readonly path: string;
   protected snapshotPromise?: Promise<admin.firestore.DocumentSnapshot>;
 
   protected get data(): Promise<admin.firestore.DocumentData | undefined> {
@@ -19,8 +18,24 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
     return this.dataPromise;
   }
 
+  public get dryRun(): boolean {
+    return this.config.dryRun;
+  }
+
   public get exists(): Promise<boolean> {
     return this.snapshot.then((snap) => snap.exists);
+  }
+
+  public get id(): string {
+    return this.documentRef.id;
+  }
+
+  public get logger(): Logger {
+    return this.config.logger;
+  }
+
+  public get path(): string {
+    return this.documentRef.path;
   }
 
   protected get snapshot(): Promise<admin.firestore.DocumentSnapshot> {
@@ -32,11 +47,8 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
 
   constructor(
     private readonly documentRef: admin.firestore.DocumentReference,
-    public readonly dryRun: boolean,
-    public readonly logger: Logger,
+    protected readonly config: FirestoreSyncProfileOperationAdapter,
   ) {
-    this.id = documentRef.id;
-    this.path = documentRef.path;
   }
 
   public buildEmptyReadableProperty(property: PropertyLike): PropertyLike {
@@ -48,7 +60,13 @@ export class FirestoreDocument implements DocumentLike, WithLogger {
     if (data == null) {
       return [];
     }
-    return buildReadablePropertyLike(this.id + ':' + DOCUMENT_ROOT_PATH, this.path, DOCUMENT_ROOT_PATH, data, this.dryRun, this.logger);
+    return [buildReadablePropertyLike(
+      this.id + ':' + DOCUMENT_ROOT_PATH,
+      this.path,
+      DOCUMENT_ROOT_PATH,
+      data,
+      this.config,
+    )];
   }
 
   public updateFrom(document: DocumentLike): Promise<void> {
@@ -67,6 +85,12 @@ export class WritableFirestoreDocument extends FirestoreDocument implements Writ
     if (data == null) {
       return [];
     }
-    return buildWritablePropertyLike(this.id + ':', this.path, DOCUMENT_ROOT_PATH, data, this.dryRun, this.logger);
+    return [buildWritablePropertyLike(
+      this.id + ':' + DOCUMENT_ROOT_PATH,
+      this.path,
+      DOCUMENT_ROOT_PATH,
+      data,
+      this.config,
+    )];
   }
 }

@@ -1,6 +1,6 @@
-import {Logger} from "../base/Logger";
-import {PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
-import {notImplemented} from "./NotImplemented";
+import {PropertyConfig, PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
+import {FirestoreOnTypeMismatch} from "../config/FirestoreSyncConfig";
+import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 
 export const DOCUMENT_ROOT_PATH = '$';
 
@@ -20,252 +20,252 @@ export function asSubpath(keyName: string): string {
   return '[' + JSON.stringify(keyName) + ']';
 }
 
-abstract class BaseProperty {
-  protected constructor(
+export interface PropertyConfigImpl extends PropertyConfig {
+  readonly logSkips: boolean;
+  readonly writable: boolean;
+}
+
+abstract class BaseProperty<VALUE, IMPL extends BaseProperty<VALUE, IMPL>> implements PropertyLike, WritablePropertyLike {
+  public removed: boolean = false;
+  protected written?: VALUE;
+
+  public get readableProperties(): PropertyLike[] {
+    return this.config.writable ? [] : this.children;
+  }
+
+  public get writableProperties(): WritablePropertyLike[] {
+    return this.config.writable ? this.children : [];
+  }
+
+  public constructor(
     public readonly id: string,
-    public readonly documentPath: string,
     public readonly valuePath: string,
-    public readonly value: any,
-    public readonly dryRun: boolean,
-    public readonly logger: Logger,
+    public readonly value: VALUE | undefined,
+    public readonly key: string | undefined,
+    public readonly index: number | undefined,
+    public readonly children: Array<BaseProperty<any, any>> = [],
+    public readonly config: PropertyConfigImpl,
     public readonly type = typeof value,
     public readonly exists = hasAnyValue(value),
     public readonly isScalar = hasScalarValue(value),
   ) {
   }
 
-  // noinspection JSUnusedGlobalSymbols
-  public getReadableProperties(): PropertyLike[] {
-    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
+  public asUpdated(): any {
+    if (this.removed) {
+      return undefined;
+    }
+    return this.written;
   }
 
-  // noinspection JSUnusedGlobalSymbols
+  public abstract buildEmpty(writable: boolean): IMPL;
+
+  public buildEmptyReadableProperty(): PropertyLike {
+    return this.buildEmpty(false);
+  }
+
+  public buildEmptyWritableProperty(): WritablePropertyLike {
+    return this.buildEmpty(true);
+  }
+
+  protected canAssignFrom(readable: BaseProperty<any, any>): boolean {
+    return this.value == null || readable.value == null || this.type === readable.type;
+  }
+
+  protected checkForTypeMismatch(readable: any): FirestoreOnTypeMismatch | undefined {
+    if (!this.canAssignFrom(readable)) {
+      switch (this.config.onTypeMismatch) {
+        case FirestoreOnTypeMismatch.LOG:
+          this.config.logger(this.constructor.name, 'updateFrom', `Type mismatch ${readable.type} => ${this.type}`);
+          break;
+        case FirestoreOnTypeMismatch.FAIL:
+          throw new Error(`Type mismatch (${readable.type} => ${this.type}) in ${this.config.documentPath} ${this.valuePath}`);
+        case FirestoreOnTypeMismatch.SKIP_VALUE:
+          if (this.config.logSkips) {
+            this.config.logger(
+              this.constructor.name,
+              'updateFrom',
+              `Skip because of type mismatch (${readable.type} => ${this.type}) in ${this.config.documentPath} ${this.valuePath}`,
+            );
+          }
+          break;
+        case FirestoreOnTypeMismatch.SKIP_DOCUMENT:
+          throw FirestoreOnTypeMismatch.SKIP_DOCUMENT;
+        default:
+          throw new Error(`Unknown onTypeMismatch option: ${this.config.onTypeMismatch}`);
+      }
+      return this.config.onTypeMismatch;
+    }
+    return undefined;
+  }
+
+  protected childrenWith(writable: boolean): Array<BaseProperty<any, any>> {
+    return this.children.map((child) => child.buildEmpty(writable));
+  }
+
+  protected configWith(writable: boolean): PropertyConfigImpl {
+    if (this.config.writable === writable) {
+      return this.config;
+    }
+    return {
+      ...this.config,
+      writable,
+    };
+  }
+
+  protected getPrepared(): VALUE | undefined {
+    return this.value;
+  }
+
   public matches(other: PropertyLike): Promise<boolean> {
     return Promise.resolve(this.value === other.value);
   }
-}
 
-// tslint:disable-next-line:max-classes-per-file
-export class KeyedProperty extends BaseProperty implements PropertyLike {
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    public readonly key: string,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
-  }
-
-  public buildEmptyReadableProperty(): PropertyLike {
-    return new KeyedProperty(
-      this.id,
-      this.documentPath,
-      this.valuePath,
-      this.key,
-      undefined,  // empty
-      this.dryRun,
-      this.logger,
-      this.type,  // ... but the correct type
-      false,  // empty
-      this.isScalar,  // ... but the correct answer here
-    );
-  }
-
-  public buildEmptyWritableProperty(): WritablePropertyLike {
-    return new WritableKeyedProperty(
-      this.id,
-      this.documentPath,
-      this.valuePath,
-      this.key,
-      undefined,  // empty
-      this.dryRun,
-      this.logger,
-      this.type,  // ... but the correct type
-      false,  // empty
-      this.isScalar,  // ... but the correct answer here
-    );
+  public async updateFrom(readable: PropertyLike): Promise<void> {
+    if (!this.config.writable) {
+      throw new Error(`Not writable: ${this.constructor.name} ${this.config.documentPath} ${this.valuePath}`);
+    }
+    if (!this.config.dryRun) {
+      const maybeOnMismatch = this.checkForTypeMismatch(readable.value);
+      if (maybeOnMismatch === FirestoreOnTypeMismatch.SKIP_VALUE) {
+        return;
+      }
+      this.written = (readable as BaseProperty<any, any>).getPrepared();
+      if (this.written === undefined) {
+        this.removed = true;
+      }
+      this.config.logger(
+        this.constructor.name,
+        'updateFrom',
+        `${readable.exists ? '' : 'empty '}${readable.constructor.name} => ${readable.config.documentPath} ${readable.valuePath}`,
+      );
+    }
   }
 }
 
 // tslint:disable-next-line
-export class WritableKeyedProperty extends KeyedProperty implements WritablePropertyLike {
-  protected written: any;
-
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    key: string,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, key, value, dryRun, logger, type, exists, isScalar);
-  }
-
-  public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
-  }
-
-  public async updateFrom(readProperty: PropertyLike): Promise<void> {
-    this.written = readProperty.value;
-  }
-}
-
-// tslint:disable-next-line
-export class BasicProperty extends BaseProperty implements PropertyLike {
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
-  }
-
-  public buildEmptyReadableProperty(): PropertyLike {
+class BasicProperty extends BaseProperty<any, BasicProperty> {
+  public buildEmpty(writable: boolean): BasicProperty {
     return new BasicProperty(
       this.id,
-      this.documentPath,
       this.valuePath,
       undefined,
-      this.dryRun,
-      this.logger,
+      this.key,
+      this.index,
+      this.childrenWith(writable),
+      this.configWith(writable),
       this.type,
       false,
       this.isScalar,
     );
   }
 
-  public buildEmptyWritableProperty(): WritablePropertyLike {
-    return new WritableBasicProperty(
-      this.id,
-      this.documentPath,
-      this.valuePath,
-      undefined,
-      this.dryRun,
-      this.logger,
-      this.type,
-      false,
-      this.isScalar,
-    );
+  public async updateFrom(readable: PropertyLike): Promise<void> {
+    return super.updateFrom(readable);
   }
 }
 
 // tslint:disable-next-line
-export class WritableBasicProperty extends BasicProperty implements WritablePropertyLike {
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
-  }
-
-  public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
-  }
-
-  public async updateFrom(readProperty: PropertyLike): Promise<void> {
-    notImplemented(this, 'updateFrom');
-  }
-}
-
-// tslint:disable-next-line:max-classes-per-file
-export class ArrayEntryProperty extends BaseProperty implements PropertyLike {
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    public readonly index: number,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, value, dryRun, logger, type, exists, isScalar);
-  }
-
-  public buildEmptyReadableProperty(): PropertyLike {
-    return new ArrayEntryProperty(
+class DateProperty extends BaseProperty<Date, DateProperty> {
+  public buildEmpty(writable: boolean): DateProperty {
+    return new DateProperty(
       this.id,
-      this.documentPath,
       this.valuePath,
-      this.index,
       undefined,
-      this.dryRun,
-      this.logger,
+      this.key,
+      this.index,
+      this.childrenWith(writable),
+      this.configWith(writable),
       this.type,
       false,
       this.isScalar,
     );
   }
 
-  public buildEmptyWritableProperty(): WritablePropertyLike {
-    return new WritableArrayEntryProperty(
-      this.id,
-      this.documentPath,
-      this.valuePath,
-      this.index,
-      undefined,
-      this.dryRun,
-      this.logger,
-      this.type,
-      false,
-      this.isScalar,
-    );
-  }
-
-  public getReadableProperties(): PropertyLike[] {
-    return buildReadablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
+  protected canAssignFrom(readable: BaseProperty<any, any>): boolean {
+    return this.value == null || readable.value == null || readable.value instanceof Date;
   }
 }
 
 // tslint:disable-next-line
-export class WritableArrayEntryProperty extends ArrayEntryProperty implements WritablePropertyLike {
-  constructor(
-    id: string,
-    documentPath: string,
-    valuePath: string,
-    index: number,
-    value: any,
-    dryRun: boolean,
-    logger: Logger,
-    type = typeof value,
-    exists = hasAnyValue(value),
-    isScalar = hasScalarValue(value),
-  ) {
-    super(id, documentPath, valuePath, index, value, dryRun, logger, type, exists, isScalar);
+class ArrayProperty extends BaseProperty<any[], ArrayProperty> {
+  public asUpdated(): any[] | undefined {
+    if (this.removed) {
+      return undefined;
+    }
+    const result: any[] = [];
+    this.children.forEach((child) => {
+      if (child.index != null) {
+        if (!child.removed) {
+          const childValue = child.asUpdated();
+          if (childValue !== undefined) {
+            result[child.index] = childValue;
+          } else {
+            throw new Error(`Unexpected undefined item ${child.index} ${child.config.documentPath} ${child.valuePath}`);
+          }
+        }
+      } else {
+        throw new Error(`Item without an index: ${child.config.documentPath} ${child.valuePath}`);
+      }
+    });
+    return result;
   }
 
-  public getWritableProperties(): WritablePropertyLike[] {
-    return buildWritablePropertyLike(this.id, this.documentPath, this.valuePath, this.value, this.dryRun, this.logger);
+  public buildEmpty(writable: boolean): ArrayProperty {
+    return new ArrayProperty(
+      this.id,
+      this.valuePath,
+      undefined,
+      this.key,
+      this.index,
+      this.childrenWith(writable),
+      this.configWith(writable),
+      this.type,
+      false,
+      this.isScalar,
+    );
   }
 
-  public async updateFrom(readProperty: PropertyLike): Promise<void> {
-    notImplemented(this, 'updateFrom');
+  protected canAssignFrom(readable: BaseProperty<any, any>): boolean {
+    return this.value == null || readable.value == null || Array.isArray(readable.value);
+  }
+}
+
+export interface JsonObject {
+  [key: string]: any;
+}
+
+// tslint:disable-next-line
+class ObjectProperty extends BaseProperty<JsonObject, ObjectProperty> {
+  public buildEmpty(writable: boolean): ObjectProperty {
+    return new ObjectProperty(
+      this.id,
+      this.valuePath,
+      undefined,
+      this.key,
+      this.index,
+      this.childrenWith(writable),
+      this.configWith(writable),
+      this.type,
+      false,
+      this.isScalar,
+    );
+  }
+
+  protected canAssignFrom(readable: BaseProperty<any, any>): boolean {
+    return this.value == null || readable.value == null || readable instanceof ObjectProperty;
+  }
+
+  protected getPrepared(): JsonObject | undefined {
+    if (this.value == null) {
+      return undefined;
+    }
+    const result: JsonObject = {};
+    Object
+      .entries(this.value)
+      .sort(([ak], [bk]) => ak.localeCompare(bk))
+      .forEach(([k, v]) => result[k] = v);
+    return result;
   }
 }
 
@@ -274,17 +274,20 @@ export function buildWritablePropertyLike(
   documentPath: string,
   valuePath: string,
   value: any,
-  dryRun: boolean,
-  logger: Logger,
-): WritablePropertyLike[] {
+  config: FirestoreSyncProfileOperationAdapter,
+): WritablePropertyLike {
   return buildPropertyLike(
     id,
-    documentPath,
     valuePath,
     value,
-    (_id, dp, vp, _value) => new WritableBasicProperty(_id, dp, vp, _value, dryRun, logger),
-    (_id, dp, vp, key, _value) => new WritableKeyedProperty(_id, dp, vp, key, _value, dryRun, logger),
-    (_id, dp, vp, index, _value) => new WritableArrayEntryProperty(_id, dp, vp, index, _value, dryRun, logger),
+    {
+      documentPath,
+      dryRun: config.dryRun,
+      logSkips: config.logSkips,
+      logger: config.logger,
+      onTypeMismatch: config.onTypeMismatch,
+      writable: true,
+    },
   );
 }
 
@@ -293,33 +296,31 @@ export function buildReadablePropertyLike(
   documentPath: string,
   valuePath: string,
   value: any,
-  dryRun: boolean,
-  logger: Logger,
-): PropertyLike[] {
+  config: FirestoreSyncProfileOperationAdapter,
+): PropertyLike {
   return buildPropertyLike(
     id,
-    documentPath,
     valuePath,
     value,
-    (_id, dp, vp, _value) => new BasicProperty(_id, dp, vp, _value, dryRun, logger),
-    (_id, dp, vp, key, _value) => new KeyedProperty(_id, dp, vp, key, _value, dryRun, logger),
-    (_id, dp, vp, index, _value) => new ArrayEntryProperty(_id, dp, vp, index, _value, dryRun, logger),
+    {
+      documentPath,
+      dryRun: config.dryRun,
+      logSkips: config.logSkips,
+      logger: config.logger,
+      onTypeMismatch: config.onTypeMismatch,
+      writable: false,
+    },
   );
 }
 
-function buildPropertyLike<B extends BasicProperty & P,
-  K extends KeyedProperty & P,
-  A extends ArrayEntryProperty & P,
-  P extends PropertyLike,
-  >(
+function buildPropertyLike(
   id: string,
-  documentPath: string,
   valuePath: string,
   value: any,
-  basicBuilder: (id: string, documentPath: string, valuePath: string, value: any) => B,
-  keyedBuilder: (id: string, documentPath: string, valuePath: string, key: string, value: any) => K,
-  arrayBuilder: (id: string, documentPath: string, valuePath: string, index: number, value: any) => A,
-): P[] {
+  config: PropertyConfigImpl,
+  key?: string,
+  index?: number,
+): BaseProperty<any, any> {
   const type = typeof value;
   switch (type) {
     case "bigint":
@@ -327,23 +328,24 @@ function buildPropertyLike<B extends BasicProperty & P,
     case "number":
     case "undefined":
     case "string":
-      return [];
-    // return [basicBuilder(id, documentPath, valuePath, value)];
+      return new BasicProperty(id, valuePath, value, key, index, [], config);
     case "object":
-      if (value === null || value instanceof Date) {
-        return [];
-        // return [basicBuilder(id, documentPath, valuePath, value)];
+      if (value == null) {
+        return new BasicProperty(id, valuePath, value, key, index, [], config);
+      } else if (Array.isArray(value)) {
+        const items = value.map((item, n) => buildPropertyLike(`${id}[${n}]`, `${valuePath}[${n}]`, item, config, undefined, n));
+        return new ArrayProperty(id, valuePath, value, key, index, items, config);
+      } else if (value instanceof Date) {
+        return new DateProperty(id, valuePath, value, key, index, [], config);
+      } else {
+        const props = Object.entries(value)
+          .filter(([k]) => value.hasOwnProperty(k))
+          .map(([k, v]) => {
+            const subpath = asSubpath(k);
+            return buildPropertyLike(`${id}${subpath}`, `${valuePath}${subpath}`, v, config, k, undefined);
+          });
+        return new ObjectProperty(id, valuePath, value, key, index, props, config);
       }
-      if (Array.isArray(value)) {
-        return value.map((item, index) => arrayBuilder(`${id}[${index}]`, documentPath, `${valuePath}[${index}]`, index, item));
-      }
-      return Object
-        .keys(value)
-        .filter((key) => value.hasOwnProperty(key))
-        .map((key) => {
-          const subpath = asSubpath(key);
-          return keyedBuilder(id + subpath, documentPath, valuePath + subpath, key, value[key]);
-        });
     default:
       throw new Error(`Unexpected ${type} at "${id}"`);
   }

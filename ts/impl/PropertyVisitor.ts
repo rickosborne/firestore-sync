@@ -31,8 +31,8 @@ export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike>
 
   public getPropertyVisitors(): PropertyVisitor[] {
     if (this.propertyVisitors == null) {
-      const readProperties = this.readItem.getReadableProperties();
-      const writeProperties = this.writeItem.getWritableProperties();
+      const readProperties = this.readItem.readableProperties;
+      const writeProperties = this.writeItem.writableProperties;
       this.propertyVisitors = this.merge(
         readProperties,
         writeProperties,
