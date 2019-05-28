@@ -1,9 +1,9 @@
 import {
   DEFAULT_CONFIG,
-  DEFAULT_PROFILE_PULL,
+  DEFAULT_PROFILE_PULL, DEFAULT_PROFILE_PUSH,
   FirestoreSyncConfig,
   FirestoreSyncOperation,
-  FirestoreSyncOrder,
+  FirestoreSyncOrder, PROFILE_NAME_DEFAULT,
 } from "../config/FirestoreSyncConfig";
 import {FirestoreSyncConfigAdapter} from "../config/FirestoreSyncConfigAdapter";
 import {FirestoreSyncProfileAdapter} from "../config/FirestoreSyncProfileAdapter";
@@ -41,7 +41,9 @@ export class FirestoreSyncClient {
 
   // noinspection JSMethodCanBeStatic
   public async pull(profile: FirestoreSyncProfileAdapter): Promise<void> {
-    const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.pull);
+    const defaultProfile = this.config.profiles[PROFILE_NAME_DEFAULT];
+    const defaultPull = defaultProfile == null ? undefined : defaultProfile.pull;
+    const operation = new FirestoreSyncProfileOperationAdapter(profile, profile.pull, defaultPull, DEFAULT_PROFILE_PULL);
     const storeVisitor = new StoreVisitor(
       new FirestoreStore(profile.databaseURL, operation),
       new WritableFilesystemStore('>local', operation),
@@ -53,7 +55,9 @@ export class FirestoreSyncClient {
 
   // noinspection JSMethodCanBeStatic
   private async push(profile: FirestoreSyncProfileAdapter): Promise<void> {
-    const operation = new FirestoreSyncProfileOperationAdapter(profile, DEFAULT_PROFILE_PULL, profile.push);
+    const defaultProfile = this.config.profiles[PROFILE_NAME_DEFAULT];
+    const defaultPush = defaultProfile == null ? undefined : defaultProfile.push;
+    const operation = new FirestoreSyncProfileOperationAdapter(profile, profile.push, defaultPush, DEFAULT_PROFILE_PUSH);
     const storeVisitor = new StoreVisitor(
       new FilesystemStore('<local', operation),
       new FirestoreWriter(profile.databaseURL, operation),

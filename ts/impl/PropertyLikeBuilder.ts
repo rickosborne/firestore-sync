@@ -1,4 +1,4 @@
-import {PropertyConfig, PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
+import {PropertyApplyEffect, PropertyConfig, PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
 import {FirestoreOnTypeMismatch} from "../config/FirestoreSyncConfig";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 
@@ -21,13 +21,24 @@ export function asSubpath(keyName: string): string {
 }
 
 export interface PropertyConfigImpl extends PropertyConfig {
+  readonly create: boolean;
+  readonly delete: boolean;
   readonly logSkips: boolean;
+  readonly update: boolean;
   readonly writable: boolean;
 }
 
 abstract class BaseProperty<VALUE, IMPL extends BaseProperty<VALUE, IMPL>> implements PropertyLike, WritablePropertyLike {
   public removed: boolean = false;
   protected written?: VALUE;
+
+  public get documentPath(): string {
+    return this.config.documentPath;
+  }
+
+  public get path(): string {
+    return this.documentPath + ':' + this.valuePath;
+  }
 
   public get readableProperties(): PropertyLike[] {
     return this.config.writable ? [] : this.children;
@@ -113,12 +124,32 @@ abstract class BaseProperty<VALUE, IMPL extends BaseProperty<VALUE, IMPL>> imple
     };
   }
 
+  public effectFrom(readable: PropertyLike): PropertyApplyEffect {
+    if (!this.config.writable) {
+      throw new Error(`Not writable: ${this.constructor.name} ${this.config.documentPath} ${this.valuePath}`);
+    }
+    const maybeOnMismatch = this.checkForTypeMismatch(readable.value);
+    if (maybeOnMismatch === FirestoreOnTypeMismatch.SKIP_VALUE ||
+      maybeOnMismatch === FirestoreOnTypeMismatch.SKIP_DOCUMENT ||
+      maybeOnMismatch === FirestoreOnTypeMismatch.FAIL) {
+      return PropertyApplyEffect.TYPE_MISMATCH;
+    }
+    if (this.exists && !readable.exists) {
+      return this.config.delete ? PropertyApplyEffect.DELETE : PropertyApplyEffect.SKIP;
+    } else if (readable.exists && !this.exists) {
+      return this.config.create ? PropertyApplyEffect.CREATE : PropertyApplyEffect.SKIP;
+    } else if (!readable.exists && !this.exists) {
+      throw new Error(`Expected readable or writable to exist: ${this.path}`);
+    }
+    return this.matches(readable) ? PropertyApplyEffect.NONE : this.config.update ? PropertyApplyEffect.UPDATE : PropertyApplyEffect.SKIP;
+  }
+
   protected getPrepared(): VALUE | undefined {
     return this.value;
   }
 
-  public matches(other: PropertyLike): Promise<boolean> {
-    return Promise.resolve(this.value === other.value);
+  public matches(other: PropertyLike): boolean {
+    return this.value === other.value;
   }
 
   public async updateFrom(readable: PropertyLike): Promise<void> {
@@ -281,11 +312,14 @@ export function buildWritablePropertyLike(
     valuePath,
     value,
     {
+      create: config.createValues,
+      delete: config.deleteValues,
       documentPath,
       dryRun: config.dryRun,
       logSkips: config.logSkips,
       logger: config.logger,
       onTypeMismatch: config.onTypeMismatch,
+      update: config.updateValues,
       writable: true,
     },
   );
@@ -303,11 +337,14 @@ export function buildReadablePropertyLike(
     valuePath,
     value,
     {
+      create: config.createValues,
+      delete: config.deleteValues,
       documentPath,
       dryRun: config.dryRun,
       logSkips: config.logSkips,
       logger: config.logger,
       onTypeMismatch: config.onTypeMismatch,
+      update: config.updateValues,
       writable: false,
     },
   );

@@ -63,7 +63,7 @@ export class FilesystemCollection implements CollectionLike<FilesystemDocument>,
           Fail.when(err, 'getDocuments', this, () => `Could not readdir "${this.directory}"`);
           const documents = fileNames.map((name) => {
             const docId = this.idFromName(name);
-            return builder(docId, name, `${this.path}/${docId}`, osPath.join(this.directory, name));
+            return builder(docId, name, `${this.path}/${docId}`, this.directory);
           });
           resolve(documents);
         }
@@ -100,6 +100,8 @@ export class WritableFilesystemCollection extends FilesystemCollection implement
   }
 
   public async updateFrom(collection: CollectionLike<any>): Promise<void> {
-    notImplemented(this, 'updateFrom');
+    if (this.config.logUpdates) {
+      this.config.logger(this.constructor.name, 'updateFrom', collection.path);
+    }
   }
 }

@@ -24,8 +24,9 @@ export class DocumentVisitor extends Visitor<DocumentLike, WritableDocumentLike>
   }
 
   public async applyHasEffect(): Promise<boolean> {
-    return this.getPropertyVisitors()
-      .then((pvs) => pvs.find((pv) => pv.applyHasEffect()) != null);
+    const propertyVisitors = await this.getPropertyVisitors();
+    const effects = propertyVisitors.map((pv) => pv.applyHasEffect());
+    return effects.indexOf(true) > -1;
   }
 
   protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): OpApply {

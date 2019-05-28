@@ -24,10 +24,11 @@ export class FirestoreSyncProfileOperationAdapter extends ProvidedDefaultAdapter
 
   constructor(
     public readonly profile: FirestoreSyncProfileAdapter,
-    defaultOperation: FirestoreSyncProfileOperation,
-    providedOperation: FirestoreSyncProfileOperation,
+    providedOperation: FirestoreSyncProfileOperation | undefined,
+    defaultOperation: FirestoreSyncProfileOperation | undefined,
+    defaults?: FirestoreSyncProfileOperation,
   ) {
-    super(defaultOperation, providedOperation);
+    super(providedOperation, defaultOperation, defaults);
     this.createCollections = this.get('createCollections');
     this.createDocuments = this.get('createDocuments');
     this.createValues = this.get('createValues');

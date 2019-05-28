@@ -27,8 +27,9 @@ export class FirestoreSyncConfigAdapter extends ProvidedDefaultAdapter<Firestore
 
   public getProfile(profileName: string): FirestoreSyncProfileAdapter {
     return new FirestoreSyncProfileAdapter(
-      DEFAULT_PROFILE,
       this.providedConfig.profiles != null ? this.providedConfig.profiles[profileName] : undefined,
+      this.providedConfig.profiles != null ? this.providedConfig.profiles[PROFILE_NAME_DEFAULT] : undefined,
+      DEFAULT_PROFILE,
       this.dryRun,
     );
   }

@@ -6,12 +6,12 @@ import {ConsoleLogger} from "../impl/ConsoleLogger";
 import {FileLogger} from "../impl/FileLogger";
 import {ProvidedDefaultAdapter} from "../impl/ProvidedDefaultAdapter";
 import {
-  DEFAULT_PROFILE,
   FileNameCodec,
   FirestoreSyncOrder,
   FirestoreSyncProfile,
   FirestoreSyncProfileOperation,
 } from "./FirestoreSyncConfig";
+import {FirestoreSyncProfileOperationAdapter} from "./FirestoreSyncProfileOperationAdapter";
 
 export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<FirestoreSyncProfile> implements FirestoreSyncProfile {
   public readonly collectionReferencePrefix: string;
@@ -20,30 +20,47 @@ export class FirestoreSyncProfileAdapter extends ProvidedDefaultAdapter<Firestor
   public readonly documentReferencePrefix: string;
   public readonly fileNameCodec: FileNameCodec;
   public readonly geopointPrefix: string;
+  public readonly indent: string | number;
   public readonly log: string;
   public readonly logger: Logger;
   public readonly nameCodec: FilesystemNameCodec;
-  public readonly pull: FirestoreSyncProfileOperation;
-  public readonly push: FirestoreSyncProfileOperation;
+  public readonly pull: FirestoreSyncProfileOperation | undefined;
+  public readonly push: FirestoreSyncProfileOperation | undefined;
   public readonly serviceAccountKeyPath: string;
   public readonly sync: FirestoreSyncOrder;
   public readonly timestampPrefix: string;
 
+  public get indentForStringify(): string | number | undefined {
+    return this.indent === '' || this.indent == null ? undefined : this.indent;
+  }
+
   constructor(
-    public readonly defaultProfile: FirestoreSyncProfile = DEFAULT_PROFILE,
-    public readonly providedProfile?: FirestoreSyncProfile,
+    public readonly providedProfile: FirestoreSyncProfile | undefined,
+    public readonly defaultProfile: FirestoreSyncProfile | undefined,
+    public readonly defaults: FirestoreSyncProfile,
     public readonly dryRun: boolean = false,
   ) {
-    super(defaultProfile, providedProfile);
+    super(providedProfile, defaultProfile, defaults);
     this.collectionReferencePrefix = this.get('collectionReferencePrefix');
     this.databaseURL = this.get('databaseURL');
     this.directory = this.get('directory');
     this.documentReferencePrefix = this.get('documentReferencePrefix');
     this.fileNameCodec = this.get('fileNameCodec');
     this.geopointPrefix = this.get('geopointPrefix');
+    this.indent = this.get('indent');
     this.log = this.get('log');
-    this.pull = this.get('pull');
-    this.push = this.get('push');
+    this.pull = new FirestoreSyncProfileOperationAdapter(
+      this,
+      providedProfile != null ? providedProfile.pull : undefined,
+      defaultProfile != null ? defaultProfile.pull : undefined,
+      defaults.pull,
+    );
+    this.push = new FirestoreSyncProfileOperationAdapter(
+      this,
+      providedProfile != null ? providedProfile.push : undefined,
+      defaultProfile != null ? defaultProfile.push : undefined,
+      defaults.push,
+    );
     this.serviceAccountKeyPath = this.get('serviceAccountKeyPath');
     this.sync = this.get('sync');
     this.timestampPrefix = this.get('timestampPrefix');

@@ -30,12 +30,11 @@ export class CollectionVisitor extends Visitor<CollectionLike<any>, WritableColl
     if (this.anyEffect != null) {
       return this.anyEffect;
     }
-    return this.getDocumentVisitors()
-      .then((dvs) => dvs.map((dv) => dv.applyHasEffect()))
-      .then((effects) => firstToResolveLike(effects, (effect) => effect))
-      .then((effect) => {
-        return this.anyEffect = (effect === true);
-      });
+    const documentVisitors = await this.getDocumentVisitors();
+    const effects = documentVisitors.map((dv) => dv.applyHasEffect());
+    const effect = await Promise.all(effects).then((all) => all.indexOf(true) > -1);
+    // const effect = await firstToResolveLike(effects, (eff) => eff);
+    return (this.anyEffect = (effect === true));
   }
 
   protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): OpApply {

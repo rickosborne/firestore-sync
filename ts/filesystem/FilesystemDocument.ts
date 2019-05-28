@@ -124,7 +124,12 @@ export class WritableFilesystemDocument extends FilesystemDocument implements Wr
       const writable = writables[0];
       await writable.updateFrom(readable);
       const updated = writable.asUpdated();
-      this.logger(this.constructor.name, 'updateFrom', this.path + ' ==> ' + JSON.stringify(updated, null, 2));
+      return new Promise((resolve, reject) => fs.writeFile(
+        this.fullPath,
+        JSON.stringify(updated, null, this.config.profile.indentForStringify),
+        {encoding: 'utf8'},
+        Fail.withContext('updateFrom', this, reject).toCallbackHandler(resolve),
+      ));
     }
   }
 }

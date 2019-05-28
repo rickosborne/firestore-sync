@@ -1,5 +1,6 @@
 import {identify} from "../base/Identified";
-import {PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
+import {PropertyApplyEffect, PropertyLike, WritablePropertyLike} from "../base/PropertyLike";
+import {FirestoreOnTypeMismatch} from "../config/FirestoreSyncConfig";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {OpAction, OpStatus, TransactionOp} from "./TransactionOp";
 import {Visitor} from "./Visitor";
@@ -14,7 +15,7 @@ export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike>
   ) {
     super(
       identify(readProperty, writeProperty),
-      identify(readProperty, writeProperty),
+      readProperty != null ? readProperty.path : writeProperty != null ? writeProperty.path : '???',
       readProperty,
       writeProperty,
       config,
@@ -22,7 +23,23 @@ export class PropertyVisitor extends Visitor<PropertyLike, WritablePropertyLike>
   }
 
   public applyHasEffect(): boolean {
-    return this.getPropertyVisitors().find((pv) => pv.applyHasEffect()) != null;
+    const readEffect = this.writeItem.effectFrom(this.readItem);
+    switch (readEffect) {
+      case PropertyApplyEffect.NONE:
+        return false;
+      case PropertyApplyEffect.CREATE:
+        return this.config.createValues;
+      case PropertyApplyEffect.UPDATE:
+        return this.config.updateValues;
+      case PropertyApplyEffect.DELETE:
+        return this.config.deleteValues;
+      case PropertyApplyEffect.SKIP:
+        return false;
+      case PropertyApplyEffect.TYPE_MISMATCH:
+        return this.config.onTypeMismatch === FirestoreOnTypeMismatch.FAIL;
+      default:
+        throw new Error(`Unexpected PropertyApplyEffect: ${readEffect}`);
+    }
   }
 
   protected buildApply(action: OpAction, doAction: boolean, effects: boolean, logAction: boolean): () => Promise<OpStatus> {

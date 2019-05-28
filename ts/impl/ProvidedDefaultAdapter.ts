@@ -1,21 +1,17 @@
 export abstract class ProvidedDefaultAdapter<T> {
-  protected constructor(
-    protected readonly defaultValues: T,
-    protected readonly providedValues?: T,
-  ) {
+  private readonly itemValues: T[];
+
+  protected constructor(...itemValues: Array<T | undefined>) {
+    this.itemValues = itemValues.filter((iv) => iv != null) as T[];
   }
 
   protected get<K extends keyof T>(key: K): NonNullable<T[K]> {
-    if (this.providedValues != null) {
-      const value = this.providedValues[key];
+    for (const itemValue of this.itemValues) {
+      const value = itemValue[key];
       if (value != null) {
         return value as NonNullable<T[K]>;
       }
     }
-    const defaultValue = this.defaultValues[key];
-    if (defaultValue == null) {
-      throw new Error(`Expected a default for ${key}`);
-    }
-    return defaultValue as NonNullable<T[K]>;
+    throw new Error(`Expected a default for ${key}`);
   }
 }

@@ -40,6 +40,7 @@ export interface FirestoreSyncProfile {
   readonly dryRun?: boolean;
   readonly fileNameCodec?: FileNameCodec;
   readonly geopointPrefix?: string;
+  readonly indent?: string | number;
   readonly log?: string;
   readonly pull?: FirestoreSyncProfileOperation;
   readonly push?: FirestoreSyncProfileOperation;
@@ -122,6 +123,7 @@ export const DEFAULT_PROFILE: RequiredExcept<FirestoreSyncProfile, 'databaseURL'
   dryRun: false,
   fileNameCodec: FileNameCodec.SNAKE,
   geopointPrefix: "$firestore:geopoint$",
+  indent: '\t',
   log: '',
   pull: DEFAULT_PROFILE_PULL,
   push: DEFAULT_PROFILE_PUSH,
