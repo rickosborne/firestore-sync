@@ -5,7 +5,6 @@ import {WritableCollectionLike} from "../base/WritableCollectionLike";
 import {FirestoreSyncProfileOperationAdapter} from "../config/FirestoreSyncProfileOperationAdapter";
 import {DocumentVisitor} from "./DocumentVisitor";
 import {notImplemented} from "./NotImplemented";
-import {firstToResolveLike} from "./PromiseUtil";
 import {OpAction, OpApply, TransactionOp} from "./TransactionOp";
 import {Visitor} from "./Visitor";
 
