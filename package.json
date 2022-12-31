@@ -12,7 +12,7 @@
   "dependencies": {
     "@types/punycode": "^2.1.0",
     "arg": "^4.1.0",
-    "firebase-admin": "^8.0.0",
+    "firebase-admin": "^11.4.1",
     "punycode": "^2.1.1"
   },
   "description": "Sync local seed data with Google Firestore",
